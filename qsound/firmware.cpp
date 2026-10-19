@@ -1,8 +1,6 @@
 #include "firmware.h"
 #include <algorithm>
-#include <limits>
 #include <optional>
-#include <string>
 #include <string_view>
 #include <utility>
 
