@@ -1,6 +1,6 @@
-# DSP execution is blocked on ST18932 semantics
+# Remaining ST18932 execution questions
 
-The repository currently implements firmware loading and inspection, not QSound audio processing. It is not ready to enable QSound in TFX. There is deliberately no bypass or approximate stereo filter presented as the original effect.
+The repository implements firmware loading, original TFX pan control, spatial-table recovery and an [analytical audio model](spatial-model.md). It is not ready to claim verified original QSound output or enable that claim in TFX. The audio model exposes its arithmetic hypotheses and uses the recovered original coefficients; it does not silently skip unknown DSP instructions.
 
 ## Reproducer
 
@@ -38,15 +38,15 @@ The ST18933 datasheet refers to **ST18932 CORE & EMULATION CHIP SPECIFICATION** 
 
 The later [SB16 controller discussion](https://www.vogons.org/viewtopic.php?t=48732&start=120) identifies an embedded diagnostic CSP program. It has now been extracted from the archived 4.13 ROM: 238 instructions, a valid checksum, and six distinct extension words. Its simpler functions provide a further analysis target, but still require the undocumented instruction semantics. See [the extraction and findings](diagnostic-program.md).
 
-## What would unblock execution
+## Evidence that would settle the remaining questions
 
-Any of these would materially advance the work:
+Further static analysis and comparisons against the other Creative firmware remain possible without these sources. The following would provide additional independent evidence if they ever become available:
 
 1. The ST18932 specification, technical manual or original assembler/simulator tools.
 2. mkarcher's disassembler and notes, especially the extra instruction families, accumulator formatting and control registers.
 3. Access to a working CT1748-equipped SB16/AWE32 for controlled upload/readback tests. That would let us distinguish competing instruction interpretations and capture impulse responses. Hardware sound recordings alone would help audio verification, but not necessarily identify every internal instruction effect.
 
-No message has been sent to the researcher. No real-hardware audio comparison is claimed. The original instructions and available manuals alone do not presently establish those missing behaviours, and a guessed implementation would not provide a faithful reference.
+No message has been sent to the researcher. No real-hardware audio comparison is claimed. The original instructions and available manuals do not yet establish every missing behaviour. Assumption-based models are therefore kept separate from verified control and table recovery.
 
 ## Material retained locally
 
@@ -55,3 +55,5 @@ Ignored `research/` holds the two Creative upgrade archives, the 1989 modem data
 ## Progress without the core manual
 
 The missing manual is not treated as a prerequisite for further analysis. [TFX host control](tfx-control.md) and [spatial-table/signal-path recovery](spatial-program.md) have now substantially narrowed the implementation. The remaining uncertainty concerns execution semantics and final fixed-point output, including TFX’s out-of-table position 33. The recovered tables and callback controller are independently usable while those questions remain explicit.
+
+An offline C++ audio model now permits listening tests and arithmetic comparisons without pretending to execute the unknown instructions. The current model deliberately leaves position 33 and larger sweep positions unresolved. See its [scope and reproducible auditions](spatial-model.md).
