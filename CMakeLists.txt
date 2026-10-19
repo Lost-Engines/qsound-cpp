@@ -16,6 +16,9 @@ endfunction()
 add_executable(qsound_inspect tools/inspect.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_inspect)
 
+add_executable(qsound_model_probe tools/model_probe.cpp ${QSOUND_SOURCES})
+configure_qsound_tool(qsound_model_probe)
+
 add_executable(qsound_tables tools/tables.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_tables)
 
@@ -23,6 +26,10 @@ add_executable(qsound_control_probe tools/control_probe.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_control_probe)
 
 if(BUILD_TESTING)
+  add_executable(qsound_model_test tests/model_test.cpp ${QSOUND_SOURCES})
+  configure_qsound_tool(qsound_model_test)
+  target_compile_options(qsound_model_test PRIVATE $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-UNDEBUG> $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>)
+  add_test(NAME model.arithmetic_and_history COMMAND qsound_model_test)
   add_executable(qsound_control_test tests/control_test.cpp ${QSOUND_SOURCES})
   configure_qsound_tool(qsound_control_test)
   target_compile_options(qsound_control_test PRIVATE $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-UNDEBUG>)
