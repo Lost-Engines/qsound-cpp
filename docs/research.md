@@ -24,7 +24,7 @@ Tests must distinguish format validation, instruction checks, original-code comp
 
 ## Current result
 
-Stage 1 is complete: the original firmware has been acquired, inventoried and checked against an independent decoder. Stage 2 reached a [specific instruction-semantics blocker](blocker.md). There is no DSP executor or PCM-processing implementation yet. The reusable C++ code is firmware loading and instruction-field inspection.
+Stage 1 is complete: the original firmware has been acquired, inventoried and checked against an independent decoder. Stage 2 reached a [specific instruction-semantics blocker](blocker.md). There is no DSP executor or PCM-processing implementation yet. The reusable C++ code now also includes verified TFX pan control and literal spatial-table recovery; DSP audio execution remains unverified.
 
 The separate ST18933 datasheet was also located and inspected. It confirms that using the older ST18930 execution model unchanged would be incorrect; the precise ST18932 specification it references has not been located.
 
@@ -43,3 +43,5 @@ The supplied [Datasheet Archive query for ST18932-CORE](https://www.datasheetarc
 ## TFX control reconstruction
 
 The original loader and timer-controlled pan sweeps have now been traced through `Q2.COM`, `START.EXE` and all 106 sample definitions. The reusable C++ `position_sweep` agrees with 9,056 original callback executions; all four firmware selections and complete upload bytes are checked at the Creative driver boundary. This extends the implementation beyond firmware loading, without claiming DSP audio execution. See [TFX control findings](tfx-control.md).
+
+The [spatial program analysis](spatial-program.md) recovers all eight FIR banks, the shared 33-position gain table and the four direct-path delays. The reconstruction now identifies a delayed direct path plus filtered cancellation path per output. This is literal data-flow and algorithm analysis, not a replacement claim for the missing instruction semantics.

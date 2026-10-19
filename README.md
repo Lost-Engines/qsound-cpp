@@ -4,7 +4,7 @@ Reconstruction of Creative Sound Blaster ASP/CSP QSound processing for modern C+
 
 The intended integration is source inclusion: include the `qsound/` headers and add the corresponding `.cpp` files to the application's CMake target. There is no installed library, package manager, audio-device dependency, or DOS runtime.
 
-**Firmware loading and the original TFX pan-sweep controller are implemented; QSound audio processing is still under reconstruction.** See the [remaining instruction-semantics gaps](docs/blocker.md) and [original-code control comparisons](docs/tfx-control.md). Original Creative firmware is external input and is not included in this repository. See [research notes](docs/research.md) for the evidence and remaining questions.
+**Firmware loading, spatial-table recovery and the original TFX pan-sweep controller are implemented; QSound audio processing is still under reconstruction.** See the [remaining instruction-semantics gaps](docs/blocker.md) and [original-code control comparisons](docs/tfx-control.md). Original Creative firmware is external input and is not included in this repository. See [research notes](docs/research.md) for the evidence and remaining questions.
 
 ## Build and inspect
 
@@ -35,3 +35,12 @@ python3 tools/check_firmware.py firmware/WFM0001A.CSP
 ```
 
 [Verification scope and results](docs/verification.md) distinguish file decoding from the DSP/audio work that remains.
+
+The original FIR coefficient banks, spatial gains and delay lengths can also be inspected without DSP execution:
+
+```sh
+build/qsound_tables firmware/WFM0001A.CSP
+python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
+```
+
+See [signal-path findings and unresolved arithmetic](docs/spatial-program.md).

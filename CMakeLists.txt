@@ -16,6 +16,9 @@ endfunction()
 add_executable(qsound_inspect tools/inspect.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_inspect)
 
+add_executable(qsound_tables tools/tables.cpp ${QSOUND_SOURCES})
+configure_qsound_tool(qsound_tables)
+
 add_executable(qsound_control_probe tools/control_probe.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_control_probe)
 

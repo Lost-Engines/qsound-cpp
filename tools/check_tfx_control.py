@@ -15,7 +15,7 @@ import random
 import struct
 import subprocess
 
-from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE, UC_HOOK_INTR
+from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE, UC_HOOK_INTR, UC_HOOK_INSN
 from unicorn import x86_const as r
 from check_firmware import chunks
 
@@ -134,7 +134,7 @@ class OriginalSweep:
         cpu.mem_write(0x10000, launcher[0x200:])
         # This wrapper uses CS-relative data. Unrelated MZ startup is not run.
         cpu.mem_write(0x90000, b'\xcb')
-        cpu.mem_write(0x90010, b'\xcb')
+        cpu.mem_write(0x90010, b'\xcf')
         cpu.mem_write(0x108ce, struct.pack('<HH', 16, 0x9000))
         cpu.mem_write(0x108d8, struct.pack('<I', 0x1234))
         cpu.mem_write(0x108df, struct.pack('<HH', 0, 0x9000))
@@ -161,7 +161,7 @@ class OriginalSweep:
                                     (r.UC_X86_REG_ES, 0x7000), (r.UC_X86_REG_SS, 0x7000),
                                     (r.UC_X86_REG_SP, 0xff00), (r.UC_X86_REG_FLAGS, 0x202)):
                 cpu.reg_write(register, value)
-            cpu.mem_write(0x7ff00, struct.pack('<HH', 0xf000, 0x1000))
+            cpu.mem_write(0x7ff00, struct.pack('<HHH', 0xf000, 0x1000, 0x202))
             self.calls.clear()
             cpu.emu_start(0x108a6, 0x1f000, count=10_000)
             assert cpu.reg_read(r.UC_X86_REG_CS) == 0x1000 and cpu.reg_read(r.UC_X86_REG_IP) == 0xf000
@@ -171,6 +171,52 @@ class OriginalSweep:
                 assert self.calls == [[0xe0, 1], [0, cached], [2, 0]]
             results.append([phase, cached, cached if self.calls else -1])
         return results
+
+
+
+def original_timer_schedule(launcher, interrupts=10_000):
+    """Run the original OSL PIT setup and inactive-player IRQ chaining path."""
+    cpu = Uc(UC_ARCH_X86, UC_MODE_16)
+    cpu.mem_map(0, 0x100000)
+    cpu.mem_write(0x10000, launcher[0x200:])
+    master_segment = 0x1353  # Original MZ segment 0353, loaded at 1000.
+    master = master_segment * 16
+    cpu.mem_write(0x90000, b'\xcf')  # Supplied previous BIOS handler: IRET.
+    cpu.mem_write(master + 0x1e3b, struct.pack('<HH', 0, 0x9000))
+    cpu.mem_write(master + 0x1d09, bytes(2))  # Explicit inactive OSL player.
+    cpu.mem_write(master + 0x1de4, bytes(1))
+    writes, callbacks = [], []
+    current_interrupt = 0
+    cpu.hook_add(UC_HOOK_INSN,
+                 lambda c, port, size, value, u: writes.append([port, value]),
+                 None, 1, 0, r.UC_X86_INS_OUT)
+    cpu.hook_add(UC_HOOK_CODE, lambda c, pc, size, u: callbacks.append(current_interrupt),
+                 begin=0x90000, end=0x90000)
+
+    def call(address, irq=False):
+        for register, value in ((r.UC_X86_REG_CS, master_segment), (r.UC_X86_REG_DS, 0x7000),
+                                (r.UC_X86_REG_ES, 0x7000), (r.UC_X86_REG_SS, 0x7000),
+                                (r.UC_X86_REG_SP, 0xff00), (r.UC_X86_REG_FLAGS, 0x202)):
+            cpu.reg_write(register, value)
+        frame = struct.pack('<HHH', 0xf000, master_segment, 0x202) if irq else struct.pack('<H', 0xf000)
+        cpu.mem_write(0x7ff00, frame)
+        cpu.emu_start(master + address, master + 0xf000, count=10_000)
+        assert cpu.reg_read(r.UC_X86_REG_CS) == master_segment and cpu.reg_read(r.UC_X86_REG_IP) == 0xf000
+
+    call(0x1e61)
+    assert writes == [[0x43, 0x36], [0x40, 0x55], [0x40, 0x55]]
+    phase, modulus, step = struct.unpack('<3H', cpu.mem_read(master + 0x1d0b, 6))
+    assert (phase, modulus, step) == (0, 137, 50)
+    expected = []
+    for current_interrupt in range(interrupts):
+        phase -= step
+        if phase < 0:
+            phase += modulus
+            expected.append(current_interrupt)
+        call(0x1e03, irq=True)
+    assert callbacks == expected
+    return dict(pit_divisor=0x5555, phase_step=step, phase_modulus=modulus,
+                interrupts=interrupts, chained_callbacks=len(callbacks), first_callbacks=callbacks[:32])
 
 
 def main():
@@ -230,14 +276,15 @@ def main():
     assert actual == expected, 'C++ sweep differs from original START.EXE'
     for case in cases[:9]:
         assert reference.run(*case, status=0x45) == reference.run(*case)
-    manifest = dict(q2_sha256=Q2_SHA256, launcher_sha256=START_SHA256,
+    timer = original_timer_schedule(launcher)
+    manifest = dict(timer=timer, q2_sha256=Q2_SHA256, launcher_sha256=START_SHA256,
                     firmware_sha256=hashlib.sha256(firmware).hexdigest(), loader_traces=traces,
                     ignored_driver_failures=failures, sweep_cases=len(cases), sweep_ticks=len(expected),
                     effects=[dict(parameters=list(parameters), samples=samples) for parameters, samples in groups.items()],
                     scope='Original host control execution only; supplied driver replies, no CSP/DSP audio execution.')
     if args.output:
         args.output.write_text(json.dumps(manifest, indent=2) + '\n')
-    print(f'Q2 uploads and startup commands agree for all four firmware rates; {len(cases)} sweep cases / {len(expected)} ticks agree with original START.EXE; 106 sample definitions grouped. No QSound audio execution claimed.')
+    print(f'Q2 uploads and startup commands agree for all four firmware rates; {len(cases)} sweep cases / {len(expected)} ticks agree with original START.EXE; 106 sample definitions grouped; 10,000 original PIT IRQs checked. No QSound audio execution claimed.')
 
 
 if __name__ == '__main__':

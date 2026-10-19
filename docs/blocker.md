@@ -51,3 +51,7 @@ No message has been sent to the researcher. No real-hardware audio comparison is
 ## Material retained locally
 
 Ignored `research/` holds the two Creative upgrade archives, the 1989 modem databook, ST18933 datasheet, the published research discussion and ALSA source consulted. `firmware/` holds the fetched reference QSound container. These are research inputs, not redistributed project source. The two archived QSound versions inspected have byte-identical decoded instructions in all eight programs; their container metadata differs. Using the older firmware does not avoid the missing instruction families.
+
+## Progress without the core manual
+
+The missing manual is not treated as a prerequisite for further analysis. [TFX host control](tfx-control.md) and [spatial-table/signal-path recovery](spatial-program.md) have now substantially narrowed the implementation. The remaining uncertainty concerns execution semantics and final fixed-point output, including TFX’s out-of-table position 33. The recovered tables and callback controller are independently usable while those questions remain explicit.
