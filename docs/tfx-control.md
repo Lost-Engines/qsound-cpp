@@ -52,3 +52,7 @@ python3 tools/check_tfx_control.py --output research/tfx-control.json
 ```
 
 The Python tool requires Unicorn and original data files at `../tfx-reverse/installs/cd_1994_09/TFX` by default. `--install`, `--firmware` and `--probe` override paths. It checks 725 cases, covering all nine authored sweeps, boundaries, signed increments, cache reuse and deterministic random inputs: **9,056 original callback executions agree with the C++ controller**, including the exact three-command sequence when an update occurs. Additional executions confirm ignored driver-error replies. No hardware, DSP arithmetic or QSound filter output is represented by those counts.
+
+## Shared timer configuration
+
+Executing the original OSL PIT configuration at master offset `1e61` programs divisor `5555` (21,845). The IRQ chaining counter starts at zero, subtracts 50 per interrupt, and adds 137 when negative before calling the previous handler. The QSound wrapper is inserted in that previous-handler chain. The default inspected configuration therefore gives 50 callbacks per 137 IRQs, about 19.9 callbacks per second for a standard PC PIT clock. Ten thousand original IRQ executions confirm the exact callback indices. This records the inspected timer state; a host must follow later original timer configuration changes rather than assuming that frequency is universal.
