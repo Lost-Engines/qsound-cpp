@@ -56,3 +56,7 @@ The Python tool requires Unicorn and original data files at `../tfx-reverse/inst
 ## Shared timer configuration
 
 Executing the original OSL PIT configuration at master offset `1e61` programs divisor `5555` (21,845). The IRQ chaining counter starts at zero, subtracts 50 per interrupt, and adds 137 when negative before calling the previous handler. The QSound wrapper is inserted in that previous-handler chain. The default inspected configuration therefore gives 50 callbacks per 137 IRQs, about 19.9 callbacks per second for a standard PC PIT clock. Ten thousand original IRQ executions confirm the exact callback indices. This records the inspected timer state; a host must follow later original timer configuration changes rather than assuming that frequency is universal.
+
+## Creative driver boundary
+
+Both original `CSP.SYS` versions have also been executed. All 256 operands pass unchanged for each of five commands: 2,560 calls in total, plus allocation and failure checks. In particular, neither position 33 nor larger sweep positions receive special driver-side treatment. See [the driver trace and supplied hardware inputs](creative-driver.md).

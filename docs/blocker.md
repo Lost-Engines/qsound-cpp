@@ -57,3 +57,5 @@ Ignored `research/` holds the two Creative upgrade archives, the 1989 modem data
 The missing manual is not treated as a prerequisite for further analysis. [TFX host control](tfx-control.md) and [spatial-table/signal-path recovery](spatial-program.md) have now substantially narrowed the implementation. The remaining uncertainty concerns execution semantics and final fixed-point output, including TFX’s out-of-table position 33. The recovered tables and callback controller are independently usable while those questions remain explicit.
 
 An offline C++ audio model now permits listening tests and arithmetic comparisons without pretending to execute the unknown instructions. The current model deliberately leaves position 33 and larger sweep positions unresolved. See its [scope and reproducible auditions](spatial-model.md).
+
+Executing both versions of the [original Creative DOS driver](creative-driver.md) has ruled out another ambiguity: positions 33 and above are transmitted unchanged. Further analysis must account for these actual DSP inputs rather than assuming the driver clamps them.
