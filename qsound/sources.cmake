@@ -4,4 +4,5 @@ set(QSOUND_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/..")
 set(QSOUND_SOURCES
   "${CMAKE_CURRENT_LIST_DIR}/firmware.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/instruction.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/position_sweep.cpp"
 )

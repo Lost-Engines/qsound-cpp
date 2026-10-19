@@ -1,6 +1,6 @@
 # Verification status
 
-The checked implementation is firmware decoding and instruction inspection. **There is no QSound DSP execution or audio output yet.** The [ST18932 research blocker](blocker.md) prevents claiming either.
+The checked implementation is firmware decoding, instruction inspection and TFX pan-sweep control. **There is no QSound DSP execution or audio output yet.** The [ST18932 research blocker](blocker.md) prevents claiming either.
 
 ## Checks completed
 
@@ -27,3 +27,5 @@ build/qsound_inspect firmware/WFM0001A.CSP --extensions
 For sanitizers, configure another in-tree build with `-fsanitize=address,undefined` in `CMAKE_CXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`, then run CTest and the independent firmware check against that build's inspector.
 
 These checks do not establish DSP arithmetic, sample timing, impulse responses, speaker positioning or equality with an original card. No TFX audio path has been changed.
+
+Original TFX host control is additionally checked by `tools/check_tfx_control.py`: 725 cases / 9,056 sweep callbacks, all 106 sample descriptors, all four selected setup/processing uploads, startup parameter sequences and explicit driver-failure cases. DOS I/O and Creative driver replies are supplied; original x86 control instructions execute. This establishes the C++ sweep and host protocol, not QSound audio. See [the control comparison scope](tfx-control.md).
