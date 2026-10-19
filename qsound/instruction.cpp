@@ -1,5 +1,4 @@
 #include "instruction.h"
-#include <array>
 #include <format>
 
 namespace qsound {

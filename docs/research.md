@@ -20,3 +20,9 @@ This project targets Creative's CT1748 ASP/CSP implementation of QSound, not Cap
 4. Compare deterministic test signals and original TFX control calls, then document integration and remaining hardware verification limits.
 
 Tests must distinguish format validation, instruction checks, original-code comparisons, and real-hardware audio comparisons. Passing one does not imply the others.
+
+## Current result
+
+Stage 1 is complete: the original firmware has been acquired, inventoried and checked against an independent decoder. Stage 2 reached a [specific instruction-semantics blocker](blocker.md). There is no DSP executor or PCM-processing implementation yet. The reusable C++ code is firmware loading and instruction-field inspection.
+
+The separate ST18933 datasheet was also located and inspected. It confirms that using the older ST18930 execution model unchanged would be incorrect; the precise ST18932 specification it references has not been located.
