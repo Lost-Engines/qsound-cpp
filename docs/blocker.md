@@ -36,6 +36,8 @@ The ST18933 datasheet refers to **ST18932 CORE & EMULATION CHIP SPECIFICATION** 
 
 [mkarcher's 2022 research](https://www.vogons.org/viewtopic.php?t=86739) establishes that enough of this core can be recovered to write a disassembler and patch firmware on real hardware. The linked discussion does not publish the complete disassembler or instruction notes; its June 2023 update says the documentation/tooling was not a high priority. Existing ALSA code establishes how to load programs and send parameters, not the DSP arithmetic.
 
+The later [SB16 controller discussion](https://www.vogons.org/viewtopic.php?t=48732&start=120) identifies an embedded diagnostic CSP program. It has now been extracted from the archived 4.13 ROM: 238 instructions, a valid checksum, and six distinct extension words. Its simpler functions provide a further analysis target, but still require the undocumented instruction semantics. See [the extraction and findings](diagnostic-program.md).
+
 ## What would unblock execution
 
 Any of these would materially advance the work:
