@@ -70,7 +70,7 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
       if(word & 0x10000u) accumulator = result;
       continue;
     }
-    if(word == 0xfc600084u) break;                                                // next section initializes the delay rings
+    if(word == 0xfc600084u) break;                                              // next section initializes the delay rings
     auto const source{(word >> 12) & 7u};
     auto const destination{(word >> 1) & 7u};
     require((word & 0xffffc0ffu) == 0x04000008u || (word & 0xffffc0ffu) == 0x0400000au);

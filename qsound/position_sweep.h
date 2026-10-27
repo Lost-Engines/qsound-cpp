@@ -8,8 +8,8 @@ namespace qsound {
 using position_phase = std::uint16_t;
 
 struct sweep_parameters {
-  position_phase position{};                                                     // unsigned 8.8 position phase
-  std::int16_t increment{};                                                      // signed 8.8 phase change per callback
+  position_phase position{};                                                    // unsigned 8.8 position phase
+  std::int16_t increment{};                                                     // signed 8.8 phase change per callback
   bool moving{};
 };
 
