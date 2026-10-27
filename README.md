@@ -52,3 +52,5 @@ python3 tools/render_spatial_model.py sample.wav --output research/renders/sampl
 ```
 
 This writes maximum-compression FLACs and a comparison manifest; it requires the `flac` encoder. See [the analytical audio model](docs/spatial-model.md) for the API, assumptions and verification scope.
+
+[Position 33 in TFX](docs/position-33.md) is investigated separately, including original request-side checks and a practical compatibility recommendation.

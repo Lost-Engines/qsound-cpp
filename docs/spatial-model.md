@@ -49,6 +49,12 @@ This accepts uncompressed mono/stereo 8-bit or 16-bit PCM WAV, retains its playb
 
 Local auditions were made from TFX's `tracking` announcement at position 16 and `fx4` at position 0, using the 8 kHz bank and their original WAV playback rates. The two saturation policies gave identical output for these inputs. Rounding changed the results by at most two and one PCM least-significant bits respectively. That is useful for bounding these two choices on these examples; it is not evidence that all remaining semantic questions are inaudible. The original recordings, firmware and generated FLACs remain ignored research inputs.
 
+A further audition uses `lookslik` ("looks like the lizard"), 1.4944 seconds at 7,500 Hz. Its authored position is 0, the leftmost virtual source. A centred position-16 comparison was also rendered. QSound's endpoint uses both speaker channels: the opposite output carries filtered cancellation audio, not silence. The intended externalisation is for a suitable stereo speaker arrangement; headphones deliver the cancellation signals directly to the ears and can sound unusually wide or phasey.
+
+Unlike the previous clips, the position-0 `lookslik` audition distinguishes the saturation models: 66 interleaved samples differ by up to 552 PCM least-significant bits between floor/per-MAC and floor/output saturation. They produce 37 and 94 rail samples respectively. At position 16 the saturation policies agree, and rounding differs by at most two PCM units. These observations are input-dependent arithmetic comparisons, not a choice established from original hardware.
+
+[The position-33 follow-up](position-33.md) gives a practical endpoint-clamp recommendation and the evidence supporting it. That compatibility choice has not been silently added to the strict model.
+
 ## Validation
 
 ```sh

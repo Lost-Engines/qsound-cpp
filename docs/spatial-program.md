@@ -65,4 +65,6 @@ python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
 
 The checker uses a separate Python literal-provenance analysis rather than the C++ pattern reader. It compares all eight FIR banks and all 132 position words in all four functions. It also changes coefficient literals and regenerates their encoded checksums to verify that the reader follows external firmware data, and checks rejection of unsupported instruction layouts. Those checks establish extraction, not execution or audio fidelity. Tables and firmware remain external inputs; no Creative coefficient arrays are embedded in project source.
 
-The [original Creative driver traces](creative-driver.md) rules out driver-side clamping or a special mapping for TFX position 33. Its parameter byte is passed unchanged to the DSP. That narrows the question without establishing the DSP address/format behaviour.
+The [original Creative driver traces](creative-driver.md) rule out driver-side clamping or a special mapping for TFX position 33. Its parameter byte is passed unchanged to the DSP. That narrows the question without establishing the DSP address/format behaviour.
+
+[Further position-33 analysis](position-33.md) checks original request-side transport, identical definitions across retained builds, and the initializer tail. Under a cold linear-address interpretation the would-be row is `[133, 0, 0, 0]` in authored order, consisting of a delay head and cleared history. Endpoint clamping to 32 is recommended only as an explicit compatibility choice.

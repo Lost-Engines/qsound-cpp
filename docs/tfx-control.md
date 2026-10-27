@@ -60,3 +60,5 @@ Executing the original OSL PIT configuration at master offset `1e61` programs di
 ## Creative driver boundary
 
 Both original `CSP.SYS` versions have also been executed. All 256 operands pass unchanged for each of five commands: 2,560 calls in total, plus allocation and failure checks. In particular, neither position 33 nor larger sweep positions receive special driver-side treatment. See [the driver trace and supplied hardware inputs](creative-driver.md).
+
+The follow-up `tools/investigate_positions.py` executes the original `dcfa4` request path, queue preparation and `dd9f4` effect publication for every descriptor. All 106 publish their authored words unchanged, including the 61 position-33 records. Synthetic loaded-sample metadata, idle-stream state and Sound Blaster readiness are supplied. [The follow-up findings](position-33.md) distinguish this original-code evidence from the proposed endpoint-clamp compatibility policy.
