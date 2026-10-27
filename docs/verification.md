@@ -5,7 +5,7 @@ The checked implementation includes firmware decoding, instruction inspection, T
 ## Checks completed
 
 - GCC 16.2, C++26: Debug and Release builds, with warnings enabled.
-- All four offline CTests pass in Debug, Release and an AddressSanitizer/UndefinedBehaviorSanitizer build. The final sanitizer run enabled leak detection and halted on undefined behaviour.
+- All five offline CTests pass in Debug, Release and an AddressSanitizer/UndefinedBehaviorSanitizer build. The final sanitizer run enabled leak detection and halted on undefined behaviour.
 - Firmware fetch performed over the network, verified its archive/member/output SHA-256 values, and verified the existing output on a second run.
 - The reference QSound file: all four functions, all eight setup/processing programs, all 2,808 decoded instruction words and all program checksums agree with a separate Python reader and bit-by-bit permutation. The original archived 1993 upgrade version passes the same comparison.
 - The two recovered QSound containers have identical decoded instructions in each corresponding program.
@@ -37,3 +37,5 @@ Original TFX host control is additionally checked by `tools/check_tfx_control.py
 `tools/check_creative_driver.py` executes both original Creative `CSP.SYS` far APIs, including allocation and 1,280 parameter calls per driver covering every byte value for commands 00, 01, 02, 03 and e0. Thirteen failure cases across the two drivers and command narrowing in each are also checked. Explicit port configuration, a handle seed, delay calibration and SB16 status/echo responses are supplied. This verifies unchanged parameter transmission, including position 33; it does not verify DSP execution. See [driver trace scope](creative-driver.md).
 
 `tools/investigate_positions.py` executes all 106 original sound requests through queue preparation and shared-state publication, preserving all six authored effect bytes. All eight retained engine inventories have identical effect words for their 103 named descriptors. It also pattern-checks the four initializer tails and gain-copy block to calculate the conditional cold linear read for position 33; this latter calculation remains an addressing hypothesis, not DSP execution. See [position-33 evidence](position-33.md).
+
+The explicit endpoint policy is checked for every possible position byte against the corresponding valid endpoint selection. The C++ upgrade extractor passes the public overlapping-copy DCL example, truncation and bounds tests. Its extracted original `MAIN.PVL` reproduces every table in the independently fetched CSP. Direct CSP and MAIN.PVL assets use the same RIFF/checksum validation after unpacking.

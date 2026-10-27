@@ -19,7 +19,7 @@ The caller must choose both policies; there is no implicit authenticity setting:
 
 Both assume signed Q15 gains and coefficients, a fractional 16-by-16 product aligned into 32 bits, and 16-bit storage between the mix and FIR stages. Those choices are consistent with the recovered constants and related core documentation, but are not established by an execution trace from this DSP. The four combinations measure only these particular uncertainties; they do not exhaust every possible core interpretation.
 
-The model accepts recovered positions 0–32. TFX also issues position 33 for many speech samples, and some moving effects leave the table range. Their actual DSP behaviour remains unresolved, so this API rejects them instead of inventing a mapping. It does not implement the four-input path, host command interpreter, VU meters or hardware sample interface.
+The default `position_policy::reject` accepts recovered positions 0–32 and rejects unresolved inputs. A caller can explicitly choose `position_policy::clamp_to_endpoints` as the constructor’s third argument. This maps every value above 32 to the right endpoint, including TFX’s speech position 33 and larger wrapped sweep bytes. It leaves `position_sweep` and its verified unsigned wrapping unchanged. The mapping is a compatibility policy; actual DSP behaviour outside the table remains unresolved. It does not implement the four-input path, host command interpreter, VU meters or hardware sample interface.
 
 ## Use
 
@@ -53,7 +53,7 @@ A further audition uses `lookslik` ("looks like the lizard"), 1.4944 seconds at 
 
 Unlike the previous clips, the position-0 `lookslik` audition distinguishes the saturation models: 66 interleaved samples differ by up to 552 PCM least-significant bits between floor/per-MAC and floor/output saturation. They produce 37 and 94 rail samples respectively. At position 16 the saturation policies agree, and rounding differs by at most two PCM units. These observations are input-dependent arithmetic comparisons, not a choice established from original hardware.
 
-[The position-33 follow-up](position-33.md) gives a practical endpoint-clamp recommendation and the evidence supporting it. That compatibility choice has not been silently added to the strict model.
+[The position-33 follow-up](position-33.md) gives a practical endpoint-clamp recommendation and the evidence supporting it. The compatibility choice is now available explicitly; strict rejection remains the default.
 
 ## Validation
 
@@ -63,3 +63,5 @@ python3 tools/check_spatial_model.py firmware/WFM0001A.CSP
 ```
 
 The asset-free C++ test checks cancellation, delay, coefficient ordering, reset and rejection of unsupported positions. A separate scalar Python implementation compares 48 cases across all four banks and all four arithmetic policies, totalling 27,936 stereo frames, including impulses, random values, clipping inputs and tails. It also checks malformed PCM input rejection. Debug, Release and AddressSanitizer/UndefinedBehaviorSanitizer builds pass these checks. These are tests of the stated equations, not a comparison with an executing original DSP.
+
+TFX integration uses floor rounding and saturation after each MAC, the same explicit hypotheses as the supplied primary auditions. Neither that choice nor the endpoint policy upgrades the model to verified ST18932 execution.

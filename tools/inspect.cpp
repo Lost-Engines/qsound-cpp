@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 #include "qsound/firmware.h"
+#include "qsound/upgrade.h"
 #include "qsound/instruction.h"
 
 namespace {
@@ -34,7 +35,7 @@ auto main(int const argc, char const *const *argv)->int {
     std::ifstream file{argv[1], std::ios::binary};
     if(!file) throw std::runtime_error{"cannot open firmware file"};
     std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-    auto const firmware{qsound::decode_firmware(bytes)};
+    auto const firmware{qsound::decode_firmware_asset(bytes)};
     std::map<std::uint32_t, unsigned int> extension_counts;
     for(auto const &function : firmware) {
       auto const &description{function.description};

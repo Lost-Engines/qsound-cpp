@@ -18,9 +18,10 @@ auto saturate_accumulator(std::int64_t const value)->std::int64_t {
 
 } // anonymous namespace
 
-spatial_model::spatial_model(spatial_tables tables, arithmetic_model const arithmetic)
+spatial_model::spatial_model(spatial_tables tables, arithmetic_model const arithmetic, position_policy const positions)
   : tables{std::move(tables)},
-    arithmetic{arithmetic} {
+    arithmetic{arithmetic},
+    positions{positions} {
   /// Allocate bounded histories once; processing subsequently performs no allocation
   unsigned int constexpr maximum_history{program_capacity};
   if(this->tables.left_filter.taps.empty() || this->tables.right_filter.taps.empty()
@@ -37,12 +38,13 @@ spatial_model::spatial_model(spatial_tables tables, arithmetic_model const arith
 }
 
 void spatial_model::set_positions(unsigned int const left, unsigned int const right) {
-  /// Preserve unsupported positions as an explicit unresolved case, without clamping
-  if(left >= spatial_position_count || right >= spatial_position_count) {
+  /// Keep strict recovery and the explicitly chosen compatibility policy separate
+  if(positions == position_policy::reject && (left >= spatial_position_count || right >= spatial_position_count)) {
     throw std::out_of_range{"spatial model only supports recovered table positions 0..32; TFX position 33 remains unresolved"};
   }
-  left_gains = tables.positions[left];
-  right_gains = tables.positions[right];
+  unsigned int constexpr rightmost_position{spatial_position_count - 1};
+  left_gains = tables.positions[std::min(left, rightmost_position)];
+  right_gains = tables.positions[std::min(right, rightmost_position)];
 }
 
 std::int64_t spatial_model::accumulate(std::int64_t const previous, std::int64_t const product) const noexcept {

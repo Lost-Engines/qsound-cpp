@@ -5,6 +5,7 @@
 #include <print>
 #include <vector>
 #include "qsound/firmware.h"
+#include "qsound/upgrade.h"
 #include "qsound/spatial_tables.h"
 
 namespace {
@@ -29,7 +30,7 @@ auto main(int const argc, char const *const *argv)->int try {
   std::ifstream file{argv[1], std::ios::binary};
   if(!file) throw std::runtime_error{"cannot open firmware file"};
   std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-  auto const firmware{qsound::decode_firmware(bytes)};
+  auto const firmware{qsound::decode_firmware_asset(bytes)};
   std::print("[");
   bool first_function{true};
   for(unsigned int const rate : {44'100u, 22'050u, 11'025u, 8'000u}) {

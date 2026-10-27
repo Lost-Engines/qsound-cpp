@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 #include "qsound/firmware.h"
+#include "qsound/upgrade.h"
 #include "qsound/spatial_model.h"
 
 namespace {
@@ -47,7 +48,7 @@ auto main(int const argc, char const *const *argv)->int try {
   std::ifstream file{argv[1], std::ios::binary};
   if(!file) throw std::runtime_error{"cannot open firmware file"};
   std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-  auto const firmware{qsound::decode_firmware(bytes)};
+  auto const firmware{qsound::decode_firmware_asset(bytes)};
   auto tables{qsound::recover_spatial_tables(qsound::select_qsound_function(firmware, number(argv[2])))};
   qsound::spatial_model model{std::move(tables), arithmetic};
   model.set_positions(number(argv[3]), number(argv[4]));

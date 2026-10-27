@@ -1,6 +1,6 @@
 # TFX position 33: evidence and a practical interpretation
 
-For an approximate integration, **clamp position 33 to the rightmost recovered position, 32**. That is a reasonable compatibility choice, not a verified reconstruction of the DSP's response. The strict analytical model still rejects it. Nothing in this investigation silently changes TFX playback.
+For an approximate integration, **clamp position 33 to the rightmost recovered position, 32**. That is a reasonable compatibility choice, not a verified reconstruction of the DSP's response. The strict default still rejects it; `position_policy::clamp_to_endpoints` now makes this compatibility choice explicit at construction. Nothing in this investigation silently changes TFX playback.
 
 ## What is established
 

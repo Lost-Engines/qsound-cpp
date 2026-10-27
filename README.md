@@ -54,3 +54,5 @@ python3 tools/render_spatial_model.py sample.wav --output research/renders/sampl
 This writes maximum-compression FLACs and a comparison manifest; it requires the `flac` encoder. See [the analytical audio model](docs/spatial-model.md) for the API, assumptions and verification scope.
 
 [Position 33 in TFX](docs/position-33.md) is investigated separately, including original request-side checks and a practical compatibility recommendation.
+
+Applications can explicitly select `position_policy::clamp_to_endpoints` for the documented TFX compatibility choice; strict rejection remains the default. `decode_firmware_asset` accepts an original CSP or the Creative upgrade’s `MAIN.PVL`, unpacking its first bounded binary-literal DCL stream in C++ before normal firmware validation. This allows asset-fetch scripts to extract MAIN.PVL with their existing ZIP tools, without requiring Python on players’ machines.

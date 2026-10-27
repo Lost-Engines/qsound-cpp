@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstdlib>
@@ -71,6 +72,32 @@ auto main()->int {
       }
       assert(rejected && "unresolved TFX position 33 must not be silently approximated");
     }
+  }
+  auto endpoint_tables{tables(0, {0}, {})};
+  for(unsigned int position{}; position != qsound::spatial_position_count; ++position) {
+    endpoint_tables.positions[position] = {
+      .direct_left{static_cast<std::int16_t>(position * 512)},
+      .direct_right{static_cast<std::int16_t>(16384 - position * 256)},
+      .filtered_left{},
+      .filtered_right{},
+    };
+  }
+  qsound::arithmetic_model const arithmetic{
+    .rounding{qsound::rounding_model::floor},
+    .accumulation{qsound::accumulation_model::saturate_each_mac},
+  };
+  qsound::spatial_model clamped{endpoint_tables, arithmetic, qsound::position_policy::clamp_to_endpoints};
+  qsound::spatial_model explicit_endpoint{std::move(endpoint_tables), arithmetic};
+  for(unsigned int position{}; position != 256; ++position) {
+    clamped.set_positions(position, 255 - position);
+    explicit_endpoint.set_positions(std::min(position, 32u), std::min(255 - position, 32u));
+    qsound::pcm_inputs const input{
+      .left{12345},
+      .right{-23456},
+    };
+    auto const actual{clamped.process(input)};
+    auto const expected{explicit_endpoint.process(input)};
+    assert(actual.left == expected.left && actual.right == expected.right);
   }
   return EXIT_SUCCESS;
 }

@@ -17,6 +17,11 @@ enum class accumulation_model {
   saturate_output,
 };
 
+enum class position_policy {
+  reject,
+  clamp_to_endpoints,
+};
+
 struct arithmetic_model {
   rounding_model rounding;
   accumulation_model accumulation;
@@ -44,6 +49,7 @@ class spatial_model {
 
   spatial_tables tables;
   arithmetic_model arithmetic;
+  position_policy positions;
   position_gains left_gains{};
   position_gains right_gains{};
   output_history left_history;
@@ -56,7 +62,7 @@ class spatial_model {
     filter_coefficients const &filter) noexcept;
 
 public:
-  spatial_model(spatial_tables tables, arithmetic_model arithmetic);
+  spatial_model(spatial_tables tables, arithmetic_model arithmetic, position_policy positions = position_policy::reject);
   void set_positions(unsigned int left, unsigned int right);
   stereo_sample process(pcm_inputs input) noexcept;
   void reset() noexcept;
