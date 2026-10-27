@@ -1,6 +1,7 @@
 #include <array>
 #include <bit>
 #include <charconv>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -9,9 +10,13 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#endif
 #include "qsound/firmware.h"
-#include "qsound/upgrade.h"
 #include "qsound/spatial_model.h"
+#include "qsound/upgrade.h"
 
 namespace {
 
@@ -36,6 +41,12 @@ auto main(int const argc, char const *const *argv)->int try {
     std::println(std::cerr, "Input/output: raw stereo signed 16-bit little endian. Analytical model; not verified DSP output.");
     return EXIT_FAILURE;
   }
+#if defined(_WIN32)
+  // PCM bytes include CR, LF and Ctrl-Z; the CRT must not translate them.
+  if(_setmode(_fileno(stdin), _O_BINARY) == -1 || _setmode(_fileno(stdout), _O_BINARY) == -1) {
+    throw std::runtime_error{"cannot enable binary PCM streams"};
+  }
+#endif
   std::string_view const rounding{argv[5]};
   std::string_view const accumulation{argv[6]};
   if((rounding != "floor" && rounding != "nearest") || (accumulation != "each" && accumulation != "output")) {

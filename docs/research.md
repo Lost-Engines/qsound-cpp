@@ -7,26 +7,17 @@ This project targets Creative's CT1748 ASP/CSP implementation of QSound, not Cap
 ## Primary references
 
 - [mkarcher's hardware and firmware research, 2022–2023](https://www.vogons.org/viewtopic.php?t=86739): ST18932 identity, instruction-byte permutation, program layout, RAM organisation, firmware patching and QSound processing observations. This is prior research, not code incorporated from that project.
-- [SB16 controller research, replies 124–129](https://www.vogons.org/viewtopic.php?t=48732&start=120): host command semantics and identification of an embedded diagnostic CSP program. That program has now been extracted and checksum-validated; see [diagnostic findings](diagnostic-program.md).
+- [SB16 controller research, replies 124–129](https://www.vogons.org/viewtopic.php?t=48732&start=120): host command semantics and identification of an embedded diagnostic CSP program. That program was extracted and checksum-validated; see [diagnostic findings](diagnostic-program.md).
 - [1989 SGS Modem Databook and Applications](https://bitsavers.informatik.uni-stuttgart.de/components/sgs/_dataBooks/1989_SGS_Modem_Databook_and_Applications.pdf), ST18930 datasheet starting at printed page 554: closely related processor with instruction encodings. Extra ST18932 capabilities must be established separately.
 - [ALSA CSP loader/control source](https://github.com/torvalds/linux/blob/master/sound/isa/sb/sb16_csp.c) and [cspctl manual](https://github.com/alsa-project/alsa-tools/blob/master/sb16_csp/cspctl.1): Creative RIFF containers, rate selection and the host control protocol. These operate physical hardware; they are not a DSP emulator.
 - [Creative CSP upgrade distribution](https://files.mpoli.fi/unpacked/hardware/sound/clabs/csp_upg.zip/): original firmware and DOS/Windows software to inspect locally, not redistribute as project source.
 - [TFX dependency investigation](https://github.com/Lost-Engines/tfx-cpp/blob/master/tools/check_qsound_dependencies.py): the original `Q2.COM` expects `%SOUND%\CSP\WFM0001?.CSP` and the `CSPXXXX0` resident DOS device. It publishes an interface only after successful setup.
 
-## Implementation stages
+## Current implementation
 
-1. Obtain and inventory original firmware; validate its container and instruction decoding.
-2. Establish instruction semantics and implement the executable subset with explicit unsupported-instruction errors.
-3. Run setup and processing programs with a small PCM/control API.
-4. Compare deterministic test signals and original TFX control calls, then document integration and remaining hardware verification limits.
+The component decodes original firmware, recovers its spatial tables, processes stereo PCM and reproduces TFX's position controller. TFX C++ uses this source directly. Arithmetic choices and endpoint compatibility are explicit application policies.
 
-Tests must distinguish format validation, instruction checks, original-code comparisons, and real-hardware audio comparisons. Passing one does not imply the others.
-
-## Current result
-
-Stage 1 is complete: the original firmware has been acquired, inventoried and checked against an independent decoder. Stage 2 reached a [specific instruction-semantics blocker](blocker.md). There is no verified DSP executor. The reusable C++ code now includes verified TFX pan control, literal spatial-table recovery and an analytical PCM model with explicit arithmetic policies; DSP audio execution remains unverified.
-
-The separate ST18933 datasheet was also located and inspected. It confirms that using the older ST18930 execution model unchanged would be incorrect; the precise ST18932 specification it references has not been located.
+There is no general ST18932 instruction executor. The [remaining instruction and arithmetic questions](dsp-semantics.md) limit claims of original-card equivalence, while [verification](verification.md) records the independent data/model comparisons and original x86 traces supporting the implementation.
 
 ## Additional source checks
 
@@ -38,16 +29,15 @@ For provenance, the downloaded outer SDK archive has SHA-256 `14261354702f0221e9
 
 That SDK thread also speculates that ST18932 belongs to ST7/STM8. The [ST Assembler-Linker manual, UM0144 revision 4](https://www.st.com/resource/en/user_manual/cd00056470-st-assemblerlinker-stmicroelectronics.pdf#page=45), provides the actual ST18932 reference: page 45, table 16 describes OBSEND's ST S-record 4 output format as four bytes per address, with ST18932 program space as an example. Section 6.2.7 explains the word-oriented output formats. This documents a generic object formatter; it does not establish shared instruction sets or supply a DSP assembler's instruction table.
 
-The supplied [Datasheet Archive query for ST18932-CORE](https://www.datasheetarchive.com/?q=ST18932-CORE) returned unrelated Cortex-M part highlights when checked. Searching for [ST18932 alone](https://www.datasheetarchive.com/?q=ST18932) produced contextual hits for ST18933, modem chips and the ST7/STM8 tool manuals. The relevant ST18933 material is already covered above; the ST7 tool hits are explained by the output-format reference. No ST18932 core specification was recovered from these results.
+The [Datasheet Archive query for ST18932-CORE](https://www.datasheetarchive.com/?q=ST18932-CORE) returned unrelated Cortex-M part highlights when checked. Searching for [ST18932 alone](https://www.datasheetarchive.com/?q=ST18932) produced contextual hits for ST18933, modem chips and the ST7/STM8 tool manuals. The relevant ST18933 material is already covered above; the ST7 tool hits are explained by the output-format reference. No ST18932 core specification was recovered from these results.
 
-## TFX control reconstruction
+## Findings by topic
 
-The original loader and timer-controlled pan sweeps have now been traced through `Q2.COM`, `START.EXE` and all 106 sample definitions. The reusable C++ `position_sweep` agrees with 9,056 original callback executions; all four firmware selections and complete upload bytes are checked at the Creative driver boundary. This extends the implementation beyond firmware loading, without claiming DSP audio execution. See [TFX control findings](tfx-control.md).
+- [TFX host control](tfx-control.md): loader setup, effect definitions, unsigned wrapping and original timer scheduling.
+- [Spatial program](spatial-program.md): FIR banks, position gains, direct delays and the recovered two-input signal path.
+- [Audio model](spatial-model.md): implemented equations, explicit arithmetic choices and comparisons on original sample recordings.
+- [Creative driver](creative-driver.md): both original far APIs transmit the full parameter byte unchanged, including position 33.
+- [Position 33](position-33.md): request-side transport, definitions shared by retained TFX builds, conditional memory interpretation and endpoint compatibility policy.
+- [Diagnostic program](diagnostic-program.md): a simpler CSP program embedded in the SB16 controller ROM.
 
-The [spatial program analysis](spatial-program.md) recovers all eight FIR banks, the shared 33-position gain table and the four direct-path delays. The reconstruction now identifies a delayed direct path plus filtered cancellation path per output. This is literal data-flow and algorithm analysis, not a replacement claim for the missing instruction semantics.
-
-The [analytical audio model](spatial-model.md) implements that recovered two-input path and provides offline maximum-compression FLAC auditions. Independent scalar-equation comparisons check its implementation. Arithmetic alternatives remain visible to callers, and unsupported TFX positions are rejected; it is not presented as a hardware-verified replacement.
-
-The [original DOS driver](creative-driver.md) has now been extracted from both pinned Creative distributions and both far APIs executed. This rules out driver-side remapping as an explanation for TFX position 33. Its full-byte parameter domain is checked with explicit hardware responses. The companion A-law, mu-law and IMA programs were also inspected for shared control patterns: they reuse the startup/control extensions and add variable shifts, normalisation operations and further control words. Recognising their codec formats does not by itself establish those instruction semantics. No unverified instruction implementation was promoted into the decoder on that basis.
-
-The [position-33 follow-up](position-33.md) extends original-code checks through the complete sample request and effect publication path for all 106 descriptors. It rules out an upstream remapping, compares the named effect words across eight engine inventories and derives the conditional cold scratch-RAM read. The practical recommendation is an explicit endpoint clamp to 32, while preserving the distinction from verified DSP behaviour. Longer `lookslik` auditions also expose a small saturation-policy difference absent from the first two examples.
+The companion A-law, mu-law and IMA firmware programs share startup/control extensions and add variable shifts, normalisation operations and further control words. Their containers decode correctly, but recognising their codec formats does not establish the missing instruction semantics.

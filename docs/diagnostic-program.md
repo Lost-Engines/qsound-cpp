@@ -45,4 +45,4 @@ Reply 124 also documents host interface details relevant to a future executor: c
 
 ## Remaining limitation
 
-This is a useful additional analysis target, not an independent execution oracle. We still need to establish the extension instructions and ST18932 arithmetic/control semantics described in [the blocker](blocker.md). The diagnostic's simpler algorithms can constrain interpretations and later exercise an executor; matching those functions alone would not prove QSound's rounding, saturation or filtering correct.
+This is a useful additional analysis target, not an independent execution oracle. We still need to establish the extension instructions and ST18932 arithmetic/control semantics described in [unresolved DSP semantics](dsp-semantics.md). The diagnostic's simpler algorithms can constrain interpretations and later exercise an executor; matching those functions alone would not prove QSound's rounding, saturation or filtering correct.

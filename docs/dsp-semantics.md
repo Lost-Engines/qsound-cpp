@@ -1,6 +1,6 @@
 # Remaining ST18932 execution questions
 
-The repository implements firmware loading, original TFX pan control, spatial-table recovery and an [analytical audio model](spatial-model.md). It is not ready to claim verified original QSound output or enable that claim in TFX. The audio model exposes its arithmetic hypotheses and uses the recovered original coefficients; it does not silently skip unknown DSP instructions.
+The repository implements firmware loading, original TFX pan control, spatial-table recovery and an [analytical audio model](spatial-model.md). TFX C++ uses the analytical processor, but exact original-card output remains unverified. The audio model exposes its arithmetic hypotheses and uses the recovered original coefficients; it does not silently skip unknown DSP instructions.
 
 ## Reproducer
 
@@ -46,7 +46,7 @@ Further static analysis and comparisons against the other Creative firmware rema
 2. mkarcher's disassembler and notes, especially the extra instruction families, accumulator formatting and control registers.
 3. Access to a working CT1748-equipped SB16/AWE32 for controlled upload/readback tests. That would let us distinguish competing instruction interpretations and capture impulse responses. Hardware sound recordings alone would help audio verification, but not necessarily identify every internal instruction effect.
 
-No message has been sent to the researcher. No real-hardware audio comparison is claimed. The original instructions and available manuals do not yet establish every missing behaviour. Assumption-based models are therefore kept separate from verified control and table recovery.
+The original instructions and available manuals do not establish every missing behaviour. The analytical model exposes its assumptions separately from verified control and table recovery; [verification](verification.md) describes the evidence for each part.
 
 ## Material retained locally
 
@@ -56,6 +56,6 @@ Ignored `research/` holds the two Creative upgrade archives, the 1989 modem data
 
 The missing manual is not treated as a prerequisite for further analysis. [TFX host control](tfx-control.md) and [spatial-table/signal-path recovery](spatial-program.md) have now substantially narrowed the implementation. The remaining uncertainty concerns execution semantics and final fixed-point output, including TFX’s out-of-table position 33. The recovered tables and callback controller are independently usable while those questions remain explicit.
 
-An offline C++ audio model now permits listening tests and arithmetic comparisons without pretending to execute the unknown instructions. The current model deliberately leaves position 33 and larger sweep positions unresolved. See its [scope and reproducible auditions](spatial-model.md).
+The C++ audio model supports application playback, listening tests and arithmetic comparisons without pretending to execute the unknown instructions. Original hardware behaviour for position 33 and larger sweep bytes remains unresolved. The model offers explicit endpoint clamping for practical use, while strict rejection is the default. See its [scope and reproducible auditions](spatial-model.md).
 
 Executing both versions of the [original Creative DOS driver](creative-driver.md) has ruled out another ambiguity: positions 33 and above are transmitted unchanged. Further analysis must account for these actual DSP inputs rather than assuming the driver clamps them.

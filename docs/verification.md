@@ -1,41 +1,76 @@
-# Verification status
+# Verification
 
-The checked implementation includes firmware decoding, instruction inspection, TFX pan-sweep control, spatial-table recovery and an analytical audio model. **Audio output from the model is not verified ST18932 output.** The [remaining execution questions](blocker.md) prevent claiming that equivalence.
+The component has offline regression tests, independent firmware/audio-model comparisons and original x86 control-code traces. These establish different things:
 
-## Checks completed
+| Area | Evidence | Limit |
+| --- | --- | --- |
+| Firmware decoding and spatial tables | Independent readers, original files, checksums and mutations. | Reading instructions and constants does not execute the DSP. |
+| TFX movement and Creative driver parameters | Original x86 routines executed with explicit DOS/hardware responses. | The DSP itself is not part of these traces. |
+| Audio processor | Independent scalar equations and synthetic signal tests. | Agreement establishes the implemented model, not original-card equivalence. |
+| Original hardware audio | No reference capture is available. | Exact DSP arithmetic, addressing and out-of-table positioning remain unresolved. |
 
-- GCC 16.2, C++26: Debug and Release builds, with warnings enabled.
-- All five offline CTests pass in Debug, Release and an AddressSanitizer/UndefinedBehaviorSanitizer build. The final sanitizer run enabled leak detection and halted on undefined behaviour.
-- Firmware fetch performed over the network, verified its archive/member/output SHA-256 values, and verified the existing output on a second run.
-- The reference QSound file: all four functions, all eight setup/processing programs, all 2,808 decoded instruction words and all program checksums agree with a separate Python reader and bit-by-bit permutation. The original archived 1993 upgrade version passes the same comparison.
-- The two recovered QSound containers have identical decoded instructions in each corresponding program.
-- The C++ loader also accepts the newer upgrade's A-law, mu-law, Creative ADPCM, IMA ADPCM and two FastSpeech containers. This is container/program validation only; none of those codecs is emulated.
+TFX C++ uses the processor with floor rounding, saturation after each multiply/accumulate and explicit endpoint clamping. Those choices are documented hypotheses; see [audio-model scope](spatial-model.md) and [unresolved DSP semantics](dsp-semantics.md).
 
-Offline tests cover instruction-byte permutation, a known encoded branch word, endian conversion, checksum rejection, program capacity boundaries, duplicate functions, unsupported/ambiguous rates, unknown odd-sized chunks, invalid child sizes, wrong RIFF type and every truncation of a synthetic container. Fetch-tool tests cover a published DCL example, every truncation, malformed headers/back-references, output limits and hash failure.
+## Offline regression tests
 
-## Reproduce
+Run from the repository root:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j
-ctest --test-dir build --output-on-failure
-python3 tools/fetch_firmware.py
-python3 tools/check_firmware.py firmware/WFM0001A.CSP
-build/qsound_inspect firmware/WFM0001A.CSP --extensions
+cmake --build build --config Debug -j
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
-For sanitizers, configure another in-tree build with `-fsanitize=address,undefined` in `CMAKE_CXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`, then run CTest and the independent firmware check against that build's inspector.
+The C++ tests use synthetic data. The additional Python fetch-decoder test is enabled when Python is available. None requires network access, original firmware, a game installation or an emulator.
 
-These checks do not establish DSP arithmetic, sample timing, impulse responses, speaker positioning or equality with an original card. No TFX audio path has been changed.
+| Test | Coverage |
+| --- | --- |
+| `firmware.formats_and_bounds` | Instruction permutation, known encoded word, endian conversion, checksums, capacity limits, malformed/truncated RIFF data, unknown chunks and rate selection. |
+| `firmware.upgrade_dcl` | Published overlapping-copy DCL example, native unpacking, truncation, malformed streams and extraction limits. |
+| `firmware.fetch_decoder` | Independent Python extraction, truncation, malformed headers/back-references, output limits and hash rejection. |
+| `model.arithmetic_and_history` | Cancellation, delay, tap ordering, reset, strict positioning and every byte value under the explicit clamp policy. |
+| `control.position_sweep` | Fractional phase, signed increments, wrapping and publication-cache behaviour. |
 
-Original TFX host control is additionally checked by `tools/check_tfx_control.py`: 725 cases / 9,056 sweep callbacks, all 106 sample descriptors, all four selected setup/processing uploads, startup parameter sequences and explicit driver-failure cases. DOS I/O and Creative driver replies are supplied; original x86 control instructions execute. This establishes the C++ sweep and host protocol, not QSound audio. See [the control comparison scope](tfx-control.md).
+Recorded Linux checks use GCC 16.2 with C++26: Debug, Release and AddressSanitizer/UndefinedBehaviorSanitizer builds pass all five tests. For sanitizers, configure a separate build directory with `-fsanitize=address,undefined` in both `CMAKE_CXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`. Assertions used by tests remain enabled in release configurations.
 
-`tools/check_spatial_tables.py` compares all eight FIR banks and 132 gain literals in each of the four functions against independent Python literal data-flow. Thirty-two coefficient mutations are accepted and twelve unsupported layout mutations rejected, with checksums regenerated. Both original QSound releases pass. `tools/check_tfx_control.py` additionally executes 10,000 original OSL PIT interrupts for the inspected shared-timer configuration. These establish table extraction and timer scheduling; neither is DSP arithmetic verification.
+## Firmware and audio-model comparisons
 
-`tools/check_spatial_model.py` compares the C++ audio model against independent scalar equations: 48 cases / 27,936 stereo frames across four coefficient banks and four arithmetic policies, plus malformed PCM and unsupported-position rejection. All pass in Debug, Release and the sanitizer build. Asset-free model tests cover cancellation, delay, tap ordering and reset. Local FLAC auditions compare the four policies for two original TFX samples. These checks establish the stated analytical model, not the unresolved DSP arithmetic or physical-card behaviour. See [model scope](spatial-model.md).
+These optional checks require Python's standard library, the built tools and external firmware. They do not require a TFX installation or Unicorn:
 
-`tools/check_creative_driver.py` executes both original Creative `CSP.SYS` far APIs, including allocation and 1,280 parameter calls per driver covering every byte value for commands 00, 01, 02, 03 and e0. Thirteen failure cases across the two drivers and command narrowing in each are also checked. Explicit port configuration, a handle seed, delay calibration and SB16 status/echo responses are supplied. This verifies unchanged parameter transmission, including position 33; it does not verify DSP execution. See [driver trace scope](creative-driver.md).
+```sh
+python3 tools/fetch_firmware.py
+python3 tools/check_firmware.py firmware/WFM0001A.CSP
+python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
+python3 tools/check_spatial_model.py firmware/WFM0001A.CSP
+```
 
-`tools/investigate_positions.py` executes all 106 original sound requests through queue preparation and shared-state publication, preserving all six authored effect bytes. All eight retained engine inventories have identical effect words for their 103 named descriptors. It also pattern-checks the four initializer tails and gain-copy block to calculate the conditional cold linear read for position 33; this latter calculation remains an addressing hypothesis, not DSP execution. See [position-33 evidence](position-33.md).
+Use each script's `--help` for executable-path overrides when using a different build directory. On generators that put executables under a configuration directory, supply those paths explicitly, for example `--inspect build/Release/qsound_inspect.exe` to the firmware checker.
 
-The explicit endpoint policy is checked for every possible position byte against the corresponding valid endpoint selection. The C++ upgrade extractor passes the public overlapping-copy DCL example, truncation and bounds tests. Its extracted original `MAIN.PVL` reproduces every table in the independently fetched CSP. Direct CSP and MAIN.PVL assets use the same RIFF/checksum validation after unpacking.
+Recorded results:
+
+- All four firmware functions, eight setup/processing programs, 2,808 decoded instructions and program checksums agree with an independent parser and bit-by-bit permutation. The two archived QSound containers have identical corresponding decoded instructions despite different metadata.
+- All eight FIR banks and all 132 position-gain words in each function agree with independent Python literal data-flow. Thirty-two coefficient mutations are recovered and twelve unsupported layout mutations are rejected after regenerating checksums.
+- Forty-eight audio cases, totalling 27,936 stereo frames across four banks and four arithmetic policies, agree with independent scalar equations. Inputs cover impulses, noise, clipping and tails; malformed PCM and unsupported positions are rejected.
+- Native `MAIN.PVL` extraction reproduces all tables in the independently fetched CSP. Both asset forms pass through the same RIFF and program-checksum validation.
+- The fetch script has been exercised against the archived download, verifying archive/member/output hashes and reuse of correct existing output. This network check is separate from offline CTest.
+- Additional Creative A-law, mu-law, ADPCM, IMA ADPCM and FastSpeech containers pass structural decoding. Those codecs are not implemented by the audio processor.
+
+The [FLAC audition tool](usage.md#render-wav-input-to-flac) compares arithmetic choices on recordings. [Listening notes](spatial-model.md#offline-auditions) describe the measured differences in original TFX samples; the recordings and renders are external research inputs.
+
+## Original-code comparisons
+
+These are research tools, not installation or build requirements. They need external originals, and some default to the author's neighbouring TFX research checkout. Override those locations for your own environment.
+
+| Tool | Additional inputs | Established result |
+| --- | --- | --- |
+| `tools/check_tfx_control.py` | Unicorn; September 1994 TFX install (`--install`), firmware (`--firmware`), built controller probe (`--probe`). | 725 cases / 9,056 original sweep callbacks, all 106 sample descriptors, all four firmware uploads, startup commands and ignored driver-error replies. A further 10,000 original PIT interrupts establish the inspected callback cadence. |
+| `tools/check_creative_driver.py` | Unicorn; pinned Creative upgrade ZIP (`--archive`) or extracted `CSP.SYS` (`--driver`). | Both driver APIs: 2,560 parameter calls over the full byte range, allocation, command narrowing and 13 failure cases. |
+| `tools/investigate_positions.py` | Unicorn; TFX research tree (`--research`) with retained original installs/inventory, plus TFX C++'s `tools/native_reference.py` and its dependencies (`--tfx-tools`). | All 106 sound requests preserve authored effect words. Eight engine inventories agree for their 103 named samples. Initializer inspection constrains a conditional position-33 memory read. |
+
+The controller and driver traces supply DOS I/O, sample metadata and explicit hardware status replies as described in [TFX control](tfx-control.md), [Creative driver](creative-driver.md) and [position 33](position-33.md). They execute original x86 instructions; they do not execute the firmware or capture card audio.
+
+## Documentation examples
+
+The usage guide's CMake inclusion and C++ snippets were compiled together with warnings treated as errors and exercised with CSP and PVL assets across all four banks. Whole-buffer and split-buffer output agreed, and the documented tail flush reached silence. The inspection, raw-PCM, controller and FLAC-render commands were also exercised. These checks validate the documented integration path.
+
+The Windows PCM probe was cross-built with MinGW GCC 16 and run under Wine. A 65,792-byte stream containing every byte value, including CR, LF and Ctrl-Z, produced output identical to the native Linux tool; a partial frame was rejected. This checks binary stream transport and the compiled processor, not physical-card fidelity. Renderer executable discovery and missing-input/tool diagnostics were also checked.

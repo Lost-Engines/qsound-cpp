@@ -1,26 +1,14 @@
 # QSound C++
 
-Reconstruction of Creative Sound Blaster ASP/CSP [QSound](https://en.wikipedia.org/wiki/QSound) processing for modern C++ programs, initially for [TFX C++](https://github.com/Lost-Engines/tfx-cpp).
+Creative Sound Blaster ASP/CSP [QSound](https://en.wikipedia.org/wiki/QSound) spatial processing for modern C++ programs. Feed two signed 16-bit PCM sources in and receive stereo output, using filters and positioning tables recovered from Creative's original firmware. Used by [TFX C++](https://github.com/Lost-Engines/tfx-cpp).
 
-The intended integration is source inclusion: include the `qsound/` headers and add the corresponding `.cpp` files to the application's CMake target. There is no installed library, package manager, audio-device dependency, or DOS runtime.
+The component provides 33 source positions, four firmware filter banks, persistent filter histories and an optional TFX movement controller. Audio processing allocates no memory and performs no I/O. It targets Creative's CT1748 implementation of QSound; the Capcom arcade implementation uses different hardware.
 
-**Firmware loading, spatial-table recovery and the original TFX pan-sweep controller are implemented. An offline audio model is available with explicit arithmetic assumptions; original DSP output remains unverified.** See the [remaining instruction-semantics gaps](docs/blocker.md) and [original-code control comparisons](docs/tfx-control.md). Original Creative firmware is external input and is not included in this repository. See [research notes](docs/research.md) for the evidence and remaining questions.
+**The processor is usable now, with an explicit accuracy limit:** its signal path is reconstructed, but exact arithmetic and out-of-range position behaviour have not been verified against original hardware. Applications select those policies explicitly. See [verification](docs/verification.md) for what has been established.
 
-**[Complete usage guide](docs/usage.md)**: source inclusion, firmware setup, C++ buffer-processing examples, positioning, sample rates, streaming state, the optional TFX controller and command-line tools.
+## Use in your application
 
-## Build and inspect
-
-```sh
-python3 tools/fetch_firmware.py
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j
-ctest --test-dir build --output-on-failure
-build/qsound_inspect firmware/WFM0001A.CSP --instructions
-```
-
-A C++26 compiler is required. Python is used only by the optional firmware download and offline extraction tests. The C++ component depends only on the standard library. See [firmware provenance and validation](docs/firmware.md).
-
-For source inclusion in another project:
+A **C++26 compiler** and the standard library are required. Keep this repository in your source tree and compile its sources into your existing target:
 
 ```cmake
 include(path/to/qsound-cpp/qsound/sources.cmake)
@@ -29,32 +17,27 @@ target_include_directories(your_program PRIVATE ${QSOUND_INCLUDE_DIR})
 target_compile_features(your_program PRIVATE cxx_std_26)
 ```
 
-For a compact report of instructions outside the older documented formats:
+The **[usage guide](docs/usage.md)** covers firmware loading, C++ examples, input formats, positioning, sample rates, streaming, threading and error handling. Your application supplies its mixer and audio device. Integration uses ordinary headers and sources; there is no separate library installation.
+
+## Try it on a recording
+
+From the repository root, with CMake 3.30+, a C++26 compiler, Python 3 and the `flac` command-line encoder:
 
 ```sh
-build/qsound_inspect firmware/WFM0001A.CSP --extensions
-python3 tools/check_firmware.py firmware/WFM0001A.CSP
-```
-
-[Verification scope and results](docs/verification.md) distinguish file decoding from the DSP/audio work that remains.
-
-The original FIR coefficient banks, spatial gains and delay lengths can also be inspected without DSP execution:
-
-```sh
-build/qsound_tables firmware/WFM0001A.CSP
-python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
-```
-
-See [signal-path findings and unresolved arithmetic](docs/spatial-program.md).
-
-To audition the recovered signal path with all four supported arithmetic hypotheses:
-
-```sh
+python3 tools/fetch_firmware.py
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j
 python3 tools/render_spatial_model.py sample.wav --output research/renders/sample
 ```
 
-This writes maximum-compression FLACs and a comparison manifest; it requires the `flac` encoder. See [the analytical audio model](docs/spatial-model.md) for the API, assumptions and verification scope.
+Supply your own uncompressed 8-bit or 16-bit PCM WAV. The renderer writes four maximum-compression stereo FLACs comparing the supported arithmetic choices, plus a manifest. Its default position is centre (16); use `--position 0` or `--position 32` for the endpoints. It defaults to TFX's 8 kHz filter bank and retains the WAV's playback rate; [rate selection and tool options](docs/usage.md#render-wav-input-to-flac) explain how to change that.
 
-[Position 33 in TFX](docs/position-33.md) is investigated separately, including original request-side checks and a practical compatibility recommendation.
+Original firmware is **downloaded separately**, verified by hash and extracted automatically by the fetch script. It is not bundled with this repository. Native applications can load either the extracted CSP or the upgrade's `MAIN.PVL` without Python. See [firmware setup](docs/usage.md#obtain-and-load-firmware).
 
-Applications can explicitly select `position_policy::clamp_to_endpoints` for the documented TFX compatibility choice; strict rejection remains the default. `decode_firmware_asset` accepts an original CSP or the Creative upgrade’s `MAIN.PVL`, unpacking its first bounded binary-literal DCL stream in C++ before normal firmware validation. This allows asset-fetch scripts to extract MAIN.PVL with their existing ZIP tools, without requiring Python on players’ machines.
+## Documentation and contributions
+
+- [Usage guide](docs/usage.md) — integrate and run the component.
+- [Documentation index](docs/README.md) — firmware details, verification and reverse-engineering findings.
+- [Contributing](CONTRIBUTING.md) — build checks, reproducible reports and useful research contributions.
+
+[Acknowledgements](NOTICE.md) record the prior research and format references. Original firmware and other external research inputs retain their own terms.

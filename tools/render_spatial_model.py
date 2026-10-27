@@ -51,6 +51,13 @@ def signed_samples(pcm):
     return result
 
 
+def default_tool(name):
+    """Find single-config or Release multi-config builds in the usual directory."""
+    suffix = '.exe' if sys.platform == 'win32' else ''
+    candidates = [Path('build') / (name + suffix), Path('build/Release') / (name + suffix)]
+    return next((path for path in candidates if path.is_file()), candidates[0])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', type=Path)
@@ -60,12 +67,19 @@ def main():
                         help='bank selection, independently of the input playback rate; TFX chooses 8000')
     parser.add_argument('--position', type=int, choices=range(33), default=16)
     parser.add_argument('--right-position', type=int, choices=range(33), default=16)
-    parser.add_argument('--probe', type=Path, default=Path('build/qsound_model_probe'))
-    parser.add_argument('--tables', type=Path, default=Path('build/qsound_tables'))
+    parser.add_argument('--probe', type=Path, default=default_tool('qsound_model_probe'))
+    parser.add_argument('--tables', type=Path, default=default_tool('qsound_tables'))
     args = parser.parse_args()
+    if not args.input.is_file():
+        parser.error(f'input WAV not found: {args.input}')
+    if not args.firmware.is_file():
+        parser.error(f'firmware not found: {args.firmware}; run python3 tools/fetch_firmware.py or pass --firmware')
+    for label, path in (('probe', args.probe), ('tables', args.tables)):
+        if not path.is_file():
+            parser.error(f'{label} executable not found: {path}; build the tools or pass --{label}')
     encoder = shutil.which('flac')
     if not encoder:
-        raise ValueError('the FLAC command-line encoder is required for these research renders')
+        parser.error('the flac command-line encoder is required; install it and make it available on PATH')
     rate, frames, pcm = read_pcm(args.input)
     tables = json.loads(subprocess.check_output([str(args.tables.resolve()), str(args.firmware.resolve())]))
     selected = next(row for row in tables if row['rate'] == args.firmware_rate)

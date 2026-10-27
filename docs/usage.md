@@ -269,9 +269,11 @@ Run these commands from the repository root:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-ctest --test-dir build --output-on-failure
+cmake --build build --config Release -j
+ctest --test-dir build -C Release --output-on-failure
 ```
+
+The executable examples below use a single-configuration build. With a multi-configuration generator, the C++ tools normally live in `build/Release` (with `.exe` on Windows); adjust direct tool paths accordingly. The Python renderer detects those Release locations automatically.
 
 The C++ tests use synthetic data and do not need the original firmware. An additional offline decoder test runs when Python is available. Research comparisons against original executables have separate dependencies and external inputs; see [verification](verification.md).
 
@@ -298,7 +300,7 @@ python3 tools/render_spatial_model.py sample.wav --output research/renders/sampl
 
 The renderer accepts uncompressed mono/stereo **unsigned 8-bit or signed 16-bit PCM WAV**. Mono occupies the first input lane; stereo supplies both. It preserves the WAV playback rate, appends a silent filter tail and produces four maximum-compression FLACs, one per arithmetic combination, plus `model-renders.json` with hashes and comparisons. It does not play audio.
 
-Defaults are firmware `firmware/WFM0001A.CSP`, bank 8000, and position 16 for each input. `--output` is required. `--position` controls the first input, `--right-position` the second, both limited to 0–32. `--firmware` also accepts `MAIN.PVL`. `--probe` and `--tables` override the default executables `build/qsound_model_probe` and `build/qsound_tables`. Selecting a bank does not resample the WAV: for rate-matched processing, supply a WAV at that bank's rate; for TFX auditions, preserve its original sample timing instead.
+Defaults are firmware `firmware/WFM0001A.CSP`, bank 8000, and position 16 for each input. `--output` is required. `--position` controls the first input, `--right-position` the second, both limited to 0–32. `--firmware` also accepts `MAIN.PVL`. `--probe` and `--tables` override the default executables `build/qsound_model_probe` and `build/qsound_tables`. The renderer also checks `build/Release` and uses the `.exe` suffix on Windows, supporting single- and multi-configuration generators. Selecting a bank does not resample the WAV: for rate-matched processing, supply a WAV at that bank's rate; for TFX auditions, preserve its original sample timing instead.
 
 ### Process a raw PCM stream
 
@@ -307,7 +309,7 @@ build/qsound_model_probe firmware/WFM0001A.CSP 8000 0 16 floor each \
   < input-stereo-s16le.pcm > output-stereo-s16le.pcm
 ```
 
-Arguments are `FIRMWARE RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output`. Firmware can be CSP or PVL. Input and output are headerless, interleaved **left then right, signed 16-bit little-endian**, four bytes per frame. For mono input, interleave a silent second lane first. The tool neither resamples nor appends a tail; append zero frames yourself if required. It uses strict 0–32 positions, so it cannot directly audition the clamp policy. Invalid arguments or incomplete input frames produce a nonzero exit status and a diagnostic on stderr. The probe assumes binary standard streams. Its current implementation does not explicitly select Windows binary mode; this limitation also affects the Python renderer that invokes it.
+Arguments are `FIRMWARE RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output`. Firmware can be CSP or PVL. Input and output are headerless, interleaved **left then right, signed 16-bit little-endian**, four bytes per frame. For mono input, interleave a silent second lane first. The tool neither resamples nor appends a tail; append zero frames yourself if required. It uses strict 0–32 positions, so it cannot directly audition the clamp policy. Invalid arguments or incomplete input frames produce a nonzero exit status and a diagnostic on stderr. The probe selects binary mode for standard input and output on Windows, preserving PCM bytes when invoked directly or through the Python renderer.
 
 `qsound_control_probe` is a controller regression utility. Each whitespace-separated input row contains `phase increment movement_word cached_position tick_count` as decimal integers. Each requested tick produces `phase cached_position changed_position`, with `-1` for no publication. The printed phase is after advancement. It reads no audio or firmware.
 
