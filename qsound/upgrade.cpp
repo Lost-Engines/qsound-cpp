@@ -18,7 +18,7 @@ public:
     unsigned int result{};
     for(unsigned int shift{}; shift != count; ++shift) {
       if(byte == input.size()) throw format_error{byte, "truncated DCL firmware stream"};
-      result |= ((input[byte] >> bit) & 1u) << shift;
+      result |= ((static_cast<unsigned int>(input[byte]) >> bit) & 1u) << shift;
       if(++bit == 8) {
         bit = 0;
         ++byte;
