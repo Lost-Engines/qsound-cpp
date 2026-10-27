@@ -1,5 +1,7 @@
 # Firmware acquisition and format
 
+This is an optional development workflow. Applications and the audition tools use [built-in coefficients](coefficients.md) by default and require no firmware file. The original firmware is retained as a reference for extraction, inspection and further investigation.
+
 Run `python3 tools/fetch_firmware.py` from the repository root. It downloads Creative's archived `CSPU.ZIP`, opens `MAIN.PVL`, and decodes only its first PKWARE DCL member. No installer, emulator, external extractor or game assets are required. Existing correct firmware is verified; damaged copies are replaced atomically. Downloads retry transient failures.
 
 The original firmware is written to ignored `firmware/WFM0001A.CSP`. It is not part of this project's source distribution. You can instead pass your own file to the tools.

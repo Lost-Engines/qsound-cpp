@@ -3,7 +3,6 @@
 #include <array>
 #include <cstdint>
 #include <vector>
-#include "firmware.h"
 
 namespace qsound {
 
@@ -28,6 +27,12 @@ struct spatial_tables {
   std::array<position_gains, spatial_position_count> positions{};
 };
 
+// Make an owned, editable copy of the built-in bank. No firmware is required.
+spatial_tables make_spatial_tables(unsigned int sample_rate);
+
+struct firmware_function;
+
+// Optional research API: also compile QSOUND_RESEARCH_SOURCES to use this.
 // Recover explicit literals from the reference QSound program layout.
 // This does not execute initialization, control instructions or DSP arithmetic.
 spatial_tables recover_spatial_tables(firmware_function const &function);

@@ -36,8 +36,10 @@ auto sample(char const low, char const high)->std::int16_t {
 } // anonymous namespace
 
 auto main(int const argc, char const *const *argv)->int try {
-  if(argc != 7) {
-    std::println(std::cerr, "Usage: qsound_model_probe FIRMWARE RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output");
+  bool const legacy_arguments{argc == 7};
+  bool const external_firmware{argc == 8 && std::string_view{argv[6]} == "--firmware"};
+  if(argc != 6 && !legacy_arguments && !external_firmware) {
+    std::println(std::cerr, "Usage: qsound_model_probe RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output [--firmware FILE]");
     std::println(std::cerr, "Input/output: raw stereo signed 16-bit little endian. Analytical model; not verified DSP output.");
     return EXIT_FAILURE;
   }
@@ -47,8 +49,11 @@ auto main(int const argc, char const *const *argv)->int try {
     throw std::runtime_error{"cannot enable binary PCM streams"};
   }
 #endif
-  std::string_view const rounding{argv[5]};
-  std::string_view const accumulation{argv[6]};
+  unsigned int const first{legacy_arguments ? 2u : 1u};
+  auto const rate{number(argv[first])};
+  char const *const firmware_path{legacy_arguments ? argv[1] : external_firmware ? argv[7] : nullptr};
+  std::string_view const rounding{argv[first + 3]};
+  std::string_view const accumulation{argv[first + 4]};
   if((rounding != "floor" && rounding != "nearest") || (accumulation != "each" && accumulation != "output")) {
     throw std::invalid_argument{"an explicit supported arithmetic hypothesis is required"};
   }
@@ -56,13 +61,16 @@ auto main(int const argc, char const *const *argv)->int try {
     .rounding{rounding == "floor" ? qsound::rounding_model::floor : qsound::rounding_model::nearest},
     .accumulation{accumulation == "each" ? qsound::accumulation_model::saturate_each_mac : qsound::accumulation_model::saturate_output},
   };
-  std::ifstream file{argv[1], std::ios::binary};
-  if(!file) throw std::runtime_error{"cannot open firmware file"};
-  std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-  auto const firmware{qsound::decode_firmware_asset(bytes)};
-  auto tables{qsound::recover_spatial_tables(qsound::select_qsound_function(firmware, number(argv[2])))};
+  auto tables{[&] {
+    if(!firmware_path) return qsound::make_spatial_tables(rate);
+    std::ifstream file{firmware_path, std::ios::binary};
+    if(!file) throw std::runtime_error{"cannot open firmware file"};
+    std::vector<uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    auto const firmware{qsound::decode_firmware_asset(bytes)};
+    return qsound::recover_spatial_tables(qsound::select_qsound_function(firmware, rate));
+  }()};
   qsound::spatial_model model{std::move(tables), arithmetic};
-  model.set_positions(number(argv[3]), number(argv[4]));
+  model.set_positions(number(argv[first + 1]), number(argv[first + 2]));
   std::array<char, 4> frame{};
   while(std::cin.read(frame.data(), frame.size())) {
     auto const output{model.process({

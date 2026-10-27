@@ -120,11 +120,15 @@ def replace_instruction(data, program, address, replacement):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('firmware', type=Path)
+    parser.add_argument('--compare-builtins', action='store_true', help='also require the built-in banks to match this firmware exactly')
     parser.add_argument('--tables', type=Path, default=Path('build/qsound_tables'))
     args = parser.parse_args()
     data = args.firmware.read_bytes()
     command = str(args.tables.resolve())
     compare(data, json.loads(subprocess.check_output([command, str(args.firmware.resolve())])))
+    if args.compare_builtins:
+        compare(data, json.loads(subprocess.check_output([command])))
+        print('Built-in coefficients match the external firmware in all four banks.')
     randomizer = random.Random(0x435350)
     valid = rejected = 0
     with tempfile.TemporaryDirectory() as temporary:

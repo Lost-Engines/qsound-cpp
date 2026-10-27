@@ -29,6 +29,25 @@ auto tables(unsigned int const delay, std::vector<std::int16_t> taps, qsound::po
 } // anonymous namespace
 
 auto main()->int {
+  for(unsigned int const rate : {8000u, 11025u, 22050u, 44100u}) {
+    auto changed{qsound::make_spatial_tables(rate)};
+    auto const original{changed};
+    changed.left_filter.taps[0] ^= 1;
+    changed.positions[16].direct_left ^= 1;
+    changed.direct_delay_samples = 0;
+    auto const fresh{qsound::make_spatial_tables(rate)};
+    assert(fresh.left_filter.taps == original.left_filter.taps);
+    assert(fresh.positions[16].direct_left == original.positions[16].direct_left);
+    assert(fresh.direct_delay_samples == original.direct_delay_samples);
+    assert(changed.left_filter.taps != fresh.left_filter.taps && "editable tables must have independent ownership");
+  }
+  bool unsupported_rate{};
+  try {
+    qsound::make_spatial_tables(48000);
+  } catch(std::invalid_argument const &) {
+    unsupported_rate = true;
+  }
+  assert(unsupported_rate && "bank selection must not silently approximate a rate");
   for(auto const rounding : {qsound::rounding_model::floor, qsound::rounding_model::nearest}) {
     for(auto const accumulation : {qsound::accumulation_model::saturate_each_mac, qsound::accumulation_model::saturate_output}) {
       qsound::arithmetic_model const arithmetic{

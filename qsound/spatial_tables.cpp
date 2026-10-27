@@ -3,6 +3,7 @@
 #include <optional>
 #include <stdexcept>
 #include <utility>
+#include "firmware.h"
 
 namespace qsound {
 namespace {

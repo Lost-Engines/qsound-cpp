@@ -4,7 +4,7 @@
 
 ## What it preserves
 
-The model reads its two FIR banks, 33 positioning rows and direct-path delay from an external original firmware function. There are no replacement coefficient arrays in the source. Each input contributes to four buses: direct left/right and filtered left/right. Each output combines a delayed direct bus with its FIR cancellation bus. The histories retain their state when positions change; `reset()` clears the histories without changing positions.
+The model receives two FIR banks, 33 positioning rows and a direct-path delay. `make_spatial_tables(rate)` supplies editable copies of the included original numerical coefficients. Optional research code can recover the same data from an external firmware function; see [coefficient provenance](coefficients.md). Each input contributes to four buses: direct left/right and filtered left/right. Each output combines a delayed direct bus with its FIR cancellation bus. The histories retain their state when positions change; `reset()` clears the histories without changing positions.
 
 The recovered ring operations suggest writing each new sample and then reading oldest to newest. The model follows that interpretation: the last authored coefficient multiplies the current sample. The [program analysis](spatial-program.md) records the instruction locations and the unresolved circular-access controls.
 
@@ -26,9 +26,7 @@ The default `position_policy::reject` accepts recovered positions 0–32 and rej
 See the [complete usage guide](usage.md) for firmware loading, compilable integration helpers, PCM formats, source positioning, streaming and timing.
 
 ```cpp
-auto const functions{qsound::decode_firmware(bytes)};
-auto const &function{qsound::select_qsound_function(functions, 8000)};
-qsound::spatial_model processor{qsound::recover_spatial_tables(function), {
+qsound::spatial_model processor{qsound::make_spatial_tables(8000), {
   .rounding{qsound::rounding_model::floor},
   .accumulation{qsound::accumulation_model::saturate_each_mac},
 }};
@@ -47,7 +45,7 @@ auto const output{processor.process({
 python3 tools/render_spatial_model.py sample.wav --output research/renders/sample
 ```
 
-This accepts uncompressed mono/stereo 8-bit or 16-bit PCM WAV, retains its playback rate, appends a filter tail and writes four maximum-compression FLACs. `--position` and `--right-position` select static source positions. `--firmware-rate` selects the coefficient bank separately. The manifest records input and firmware hashes, policy choices and differences from floor/per-MAC saturation. It requires the `flac` executable and the built `qsound_model_probe` and `qsound_tables` tools. It never plays audio automatically.
+This accepts uncompressed mono/stereo 8-bit or 16-bit PCM WAV, retains its playback rate, appends a filter tail and writes four maximum-compression FLACs. `--position` and `--right-position` select static source positions. `--bank-rate` selects the coefficient bank separately. The manifest records input and coefficient hashes, the optional firmware hash, policy choices and differences from floor/per-MAC saturation. It requires the `flac` executable and the built `qsound_model_probe` and `qsound_tables` tools. It never plays audio automatically.
 
 Local auditions were made from TFX's `tracking` announcement at position 16 and `fx4` at position 0, using the 8 kHz bank and their original WAV playback rates. The two saturation policies gave identical output for these inputs. Rounding changed the results by at most two and one PCM least-significant bits respectively. That is useful for bounding these two choices on these examples; it is not evidence that all remaining semantic questions are inaudible. The original recordings, firmware and generated FLACs remain ignored research inputs.
 
@@ -61,7 +59,7 @@ Unlike the previous clips, the position-0 `lookslik` audition distinguishes the 
 
 ```sh
 ctest --test-dir build --output-on-failure
-python3 tools/check_spatial_model.py firmware/WFM0001A.CSP
+python3 tools/check_spatial_model.py
 ```
 
 The asset-free C++ test checks cancellation, delay, coefficient ordering, reset and rejection of unsupported positions. A separate scalar Python implementation compares 48 cases across all four banks and all four arithmetic policies, totalling 27,936 stereo frames, including impulses, random values, clipping inputs and tails. It also checks malformed PCM input rejection. Debug, Release and AddressSanitizer/UndefinedBehaviorSanitizer builds pass these checks. These are tests of the stated equations, not a comparison with an executing original DSP.

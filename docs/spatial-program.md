@@ -63,7 +63,7 @@ build/qsound_tables firmware/WFM0001A.CSP > research/spatial-tables.json
 python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
 ```
 
-The checker uses a separate Python literal-provenance analysis rather than the C++ pattern reader. It compares all eight FIR banks and all 132 position words in all four functions. It also changes coefficient literals and regenerates their encoded checksums to verify that the reader follows external firmware data, and checks rejection of unsupported instruction layouts. Those checks establish extraction, not execution or audio fidelity. Tables and firmware remain external inputs; no Creative coefficient arrays are embedded in project source.
+The checker uses a separate Python literal-provenance analysis rather than the C++ pattern reader. It compares all eight FIR banks and all 132 position words in all four functions. It also changes coefficient literals and regenerates their encoded checksums to verify that the reader follows external firmware data, and checks rejection of unsupported instruction layouts. Those checks establish extraction, not execution or audio fidelity. The recovered numerical tables are also included as editable defaults in `qsound/coefficients.h`. `--compare-builtins` checks them against the external reference; original firmware programs remain external research inputs.
 
 The [original Creative driver traces](creative-driver.md) rule out driver-side clamping or a special mapping for TFX position 33. Its parameter byte is passed unchanged to the DSP. That narrows the question without establishing the DSP address/format behaviour.
 

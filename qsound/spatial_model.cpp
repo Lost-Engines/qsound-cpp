@@ -23,7 +23,7 @@ spatial_model::spatial_model(spatial_tables tables, arithmetic_model const arith
     arithmetic{arithmetic},
     positions{positions} {
   /// Allocate bounded histories once; processing subsequently performs no allocation
-  unsigned int constexpr maximum_history{program_capacity};
+  unsigned int constexpr maximum_history{512};
   if(this->tables.left_filter.taps.empty() || this->tables.right_filter.taps.empty()
     || this->tables.left_filter.taps.size() > maximum_history || this->tables.right_filter.taps.size() > maximum_history
     || this->tables.direct_delay_samples >= maximum_history) {

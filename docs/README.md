@@ -6,7 +6,8 @@ Start with the [usage guide](usage.md) to integrate the component or render a re
 
 | Document | Contents |
 | --- | --- |
-| [Usage](usage.md) | Source inclusion, firmware setup, C++ examples, audio formats, positioning, streaming, timing and tools. |
+| [Usage](usage.md) | Source inclusion, built-in banks, C++ examples, audio formats, positioning, streaming, timing and tools. |
+| [Coefficients](coefficients.md) | Editable built-in tables, per-processor customisation and reproducible extraction. |
 | [Firmware](firmware.md) | Download provenance, reference hashes, Creative container structure and validation. |
 | [Verification](verification.md) | Offline tests, independent comparisons, original-code traces, dependencies and accuracy limits. |
 | [Contributing](../CONTRIBUTING.md) | Build checks and what to include in reports or proposed changes. |

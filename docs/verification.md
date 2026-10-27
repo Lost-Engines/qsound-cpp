@@ -21,7 +21,7 @@ cmake --build build --config Debug -j
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-The C++ tests use synthetic data. The additional Python fetch-decoder test is enabled when Python is available. None requires network access, original firmware, a game installation or an emulator.
+The C++ tests use included coefficients and synthetic data. Independent scalar audio comparisons and the Python fetch-decoder test are enabled when Python is available. None requires network access, original firmware, a game installation or an emulator.
 
 | Test | Coverage |
 | --- | --- |
@@ -29,18 +29,19 @@ The C++ tests use synthetic data. The additional Python fetch-decoder test is en
 | `firmware.upgrade_dcl` | Published overlapping-copy DCL example, native unpacking, truncation, malformed streams and extraction limits. |
 | `firmware.fetch_decoder` | Independent Python extraction, truncation, malformed headers/back-references, output limits and hash rejection. |
 | `model.arithmetic_and_history` | Cancellation, delay, tap ordering, reset, strict positioning and every byte value under the explicit clamp policy. |
+| `model.reference_equations` | 48 cases / 27,936 frames across all built-in banks and arithmetic policies, checked against independent Python equations. |
 | `control.position_sweep` | Fractional phase, signed increments, wrapping and publication-cache behaviour. |
 
-Recorded Linux checks use GCC 16.2 with C++26: Debug, Release and AddressSanitizer/UndefinedBehaviorSanitizer builds pass all five tests. For sanitizers, configure a separate build directory with `-fsanitize=address,undefined` in both `CMAKE_CXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`. Assertions used by tests remain enabled in release configurations.
+Recorded Linux checks use GCC 16.2 with C++26: Debug, Release and AddressSanitizer/UndefinedBehaviorSanitizer builds pass all six tests. For sanitizers, configure a separate build directory with `-fsanitize=address,undefined` in both `CMAKE_CXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`. Assertions used by tests remain enabled in release configurations.
 
 ## Firmware and audio-model comparisons
 
-These optional checks require Python's standard library, the built tools and external firmware. They do not require a TFX installation or Unicorn:
+Built-in model comparisons run in ordinary CTest. The following optional extraction checks additionally require external firmware; they use Python's standard library and the built tools. They do not require a TFX installation or Unicorn:
 
 ```sh
 python3 tools/fetch_firmware.py
 python3 tools/check_firmware.py firmware/WFM0001A.CSP
-python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP
+python3 tools/check_spatial_tables.py firmware/WFM0001A.CSP --compare-builtins
 python3 tools/check_spatial_model.py firmware/WFM0001A.CSP
 ```
 
@@ -71,6 +72,6 @@ The controller and driver traces supply DOS I/O, sample metadata and explicit ha
 
 ## Documentation examples
 
-The usage guide's CMake inclusion and C++ snippets were compiled together with warnings treated as errors and exercised with CSP and PVL assets across all four banks. Whole-buffer and split-buffer output agreed, and the documented tail flush reached silence. The inspection, raw-PCM, controller and FLAC-render commands were also exercised. These checks validate the documented integration path.
+The usage guide's runtime CMake inclusion and C++ snippets are checked without firmware or research sources across all four banks. Optional CSP and PVL extraction checks compare every built-in coefficient and delay. Whole-buffer and split-buffer output agreed, and the documented tail flush reached silence. The inspection, raw-PCM, controller and FLAC-render commands were also exercised. These checks validate the documented integration path.
 
 The Windows PCM probe was cross-built with MinGW GCC 16 and run under Wine. A 65,792-byte stream containing every byte value, including CR, LF and Ctrl-Z, produced output identical to the native Linux tool; a partial frame was rejected. This checks binary stream transport and the compiled processor, not physical-card fidelity. Renderer executable discovery and missing-input/tool diagnostics were also checked.

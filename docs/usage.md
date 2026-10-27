@@ -1,14 +1,14 @@
 # Usage guide
 
-This component spatialises two signed 16-bit PCM inputs into stereo output, using the original Creative ASP/CSP QSound firmware's filters, gains and delays. Applications include its sources directly and supply their own asset loading, sound decoding, mixer, sample clock and audio device. The optional TFX position-sweep controller can reproduce that game's source movement independently of audio processing.
+This component spatialises two signed 16-bit PCM inputs into stereo output, using built-in filters, gains and delays recovered from Creative ASP/CSP QSound. No firmware file or download is required. Applications include its sources directly and supply their own asset loading, sound decoding, mixer, sample clock and audio device. The optional TFX position-sweep controller can reproduce that game's source movement independently of audio processing.
 
 The signal path is an analytical reconstruction with explicit arithmetic choices. Firmware decoding and the TFX controller have original-data/code comparisons; the generated audio has not been verified against an executing ST18932 or a physical card. See [verification](verification.md) for those boundaries and [the audio model](spatial-model.md) for the equations.
 
 ## Contents
 
 - [Include the component](#include-the-component)
-- [Obtain and load firmware](#obtain-and-load-firmware)
 - [Construct a processor and render buffers](#construct-a-processor-and-render-buffers)
+- [Customise coefficients](#customise-coefficients)
 - [PCM inputs and output](#pcm-inputs-and-output)
 - [Position sources](#position-sources)
 - [Select arithmetic](#select-arithmetic)
@@ -17,6 +17,7 @@ The signal path is an analytical reconstruction with explicit arithmetic choices
 - [Animate positions with the TFX controller](#animate-positions-with-the-tfx-controller)
 - [Handle failures](#handle-failures)
 - [Build and use the command-line tools](#build-and-use-the-command-line-tools)
+- [Optional firmware research](#optional-firmware-research)
 - [Public API reference](#public-api-reference)
 
 ## Include the component
@@ -34,35 +35,6 @@ target_compile_features(your_program PRIVATE cxx_std_26)
 
 A C++26 compiler and the standard library are sufficient for the component. There is no library installation, package discovery, audio backend or DOS driver to initialise. Include the sources once per consuming target. Building this repository's inspection tools separately is optional; it requires CMake 3.30 or later.
 
-## Obtain and load firmware
-
-The coefficient tables come from external original firmware. They are recovered at startup rather than replaced with approximations in the source.
-
-From the repository root, this optional standard-library-only Python script downloads Creative's archived upgrade and extracts the firmware:
-
-```sh
-python3 tools/fetch_firmware.py
-```
-
-The default output is `firmware/WFM0001A.CSP`. Correct existing output is verified and reused; missing or damaged output is replaced. Downloads retry transient failures and verify pinned hashes. For an existing upgrade archive or a different destination:
-
-```sh
-python3 tools/fetch_firmware.py --archive /path/to/CSPU.ZIP --output /path/to/WFM0001A.CSP
-```
-
-The C++ entry point `decode_firmware_asset(bytes)` accepts either:
-
-| Bytes supplied by the application | Handling |
-| --- | --- |
-| An original RIFF/CSP firmware file, such as `WFM0001A.CSP` | Validate and decode the container and programs. |
-| The `MAIN.PVL` member extracted from Creative's upgrade ZIP | Unpack its first bounded binary-literal PKWARE DCL stream in C++, then validate and decode the resulting CSP. |
-
-Pass the file's contents as `std::span<uint8_t const>`. The component does not open paths, search directories or fetch data. It does not accept `CSPU.ZIP` itself: extract `MAIN.PVL` using your application's existing ZIP tooling first. Using that member allows native runtime loading without Python. The original firmware retains its own terms; [firmware provenance](firmware.md) records the reference files and hashes.
-
-Use `decode_firmware(bytes)` instead when you specifically require an already unpacked CSP. Both loaders return decoded functions; select a QSound playback function with `select_qsound_function(functions, firmware_rate)`, then pass it to `recover_spatial_tables`.
-
-The selector accepts exactly **8000, 11025, 22050 or 44100**. It rejects absent or ambiguous matches. Table recovery requires the recognised QSound program layout; accepting a CSP container does not imply every codec or firmware revision can be rendered.
-
 ## Construct a processor and render buffers
 
 The following is complete application-side helper code. `make_processor` and `process_mono` are example helpers, not additional functions supplied by the component:
@@ -74,13 +46,9 @@ The following is complete application-side helper code. `make_processor` and `pr
 #include <stdexcept>
 #include <utility>
 #include "qsound/spatial_model.h"
-#include "qsound/upgrade.h"
 
-auto make_processor(std::span<uint8_t const> const firmware_bytes,
-  unsigned int const firmware_rate)->qsound::spatial_model {
-  auto const functions{qsound::decode_firmware_asset(firmware_bytes)};
-  auto const &function{qsound::select_qsound_function(functions, firmware_rate)};
-  auto tables{qsound::recover_spatial_tables(function)};
+auto make_processor(unsigned int const bank_rate)->qsound::spatial_model {
+  auto tables{qsound::make_spatial_tables(bank_rate)};
   return qsound::spatial_model{
     std::move(tables),
     {
@@ -106,11 +74,15 @@ void process_mono(qsound::spatial_model &processor,
 }
 ```
 
-Load the firmware and call `make_processor` once during setup. Pass the returned processor by reference to `process_mono` for each successive decoded buffer, using an equally sized, preallocated output buffer. Its initial source positions are both **16**, the centre. Set other positions with `processor.set_positions(left, right)` before processing or at the relevant sample boundary.
+Call `make_processor` once during setup with bank rate 8000, 11025, 22050 or 44100. The bank selects coefficients; it does not configure an audio device or resample PCM. Pass the returned processor by reference to `process_mono` for each successive decoded buffer, using an equally sized, preallocated output buffer. Its initial source positions are both **16**, the centre. Set other positions with `processor.set_positions(left, right)` before processing or at the relevant sample boundary.
 
 This example explicitly selects the same arithmetic and endpoint compatibility choices as TFX C++. To enforce the recovered 0–32 position range, pass `position_policy::reject` instead, or omit the constructor's third argument. The choices are explained below.
 
-All firmware parsing, table recovery and history allocation happen during setup. The returned processor owns the recovered tables and histories; the firmware bytes and decoded functions can be released afterwards.
+Table copying and history allocation happen during setup. The returned processor owns its tables and histories.
+
+## Customise coefficients
+
+`qsound::make_spatial_tables(rate)` returns an independent, editable `spatial_tables`. Adjust its `left_filter.taps`, `right_filter.taps`, `direct_delay_samples` or named `positions` gains before passing it to `spatial_model`. This leaves other processors and the built-in defaults unchanged. To change defaults throughout your build, edit `qsound/coefficients.h` and rebuild. See [coefficient customisation and provenance](coefficients.md) for an example, numerical conventions and extraction checks.
 
 ## PCM inputs and output
 
@@ -210,7 +182,7 @@ auto const tail_frames{std::max({
 
 Include `<algorithm>` and `<cstddef>` for this expression. Calculate and retain the count **before** moving `tables` into the processor. Feed those frames at the same processing rate as the preceding audio. The offline renderer uses this flush length too. A tail on one lane can be retained while new audio begins on the other; the output histories belong to the combined processing path.
 
-The processor provides no internal synchronisation. Own it on the audio/rendering thread, or arrange external synchronisation so `process`, position updates and `reset` cannot race. Deliver control changes to that thread at the intended sample boundaries. Prepare firmware, tables and output buffers before audio starts; the example buffer helper also checks that input and output lengths agree.
+The processor provides no internal synchronisation. Own it on the audio/rendering thread, or arrange external synchronisation so `process`, position updates and `reset` cannot race. Deliver control changes to that thread at the intended sample boundaries. Prepare tables and output buffers before audio starts; the example buffer helper also checks that input and output lengths agree.
 
 ## Animate positions with the TFX controller
 
@@ -251,13 +223,14 @@ The controller has no timer or time units. The inspected TFX timer configuration
 
 ## Handle failures
 
-Decode firmware and construct the processor during setup, where failures can be reported to the user or a fallback renderer selected:
+Select tables and construct the processor during setup, where failures can be reported to the user or a fallback renderer selected:
 
 | Failure | Exception / handling |
 | --- | --- |
-| Invalid CSP structure, bounds, program size or checksum; truncated DCL stream | `qsound::format_error`, derived from `std::runtime_error`, with an `offset` member. |
-| Unsupported/invalid DCL coding or extraction limit | `std::invalid_argument`. |
-| Unsupported, missing or ambiguous firmware rate; unrecognised spatial-table layout | `std::invalid_argument`. |
+| Optional research API: invalid CSP structure, bounds, program size or checksum; truncated DCL stream | `qsound::format_error`, derived from `std::runtime_error`, with an `offset` member. |
+| Optional research API: unsupported/invalid DCL coding or extraction limit | `std::invalid_argument`. |
+| Unsupported built-in bank rate | `std::invalid_argument` from `make_spatial_tables`. |
+| Optional research API: missing or ambiguous firmware rate; unrecognised spatial-table layout | `std::invalid_argument`. |
 | Empty or oversized filter histories, or an oversized direct delay | `std::invalid_argument` from construction. |
 | Position outside 0–32 with strict policy | `std::out_of_range` from `set_positions`; existing positions are preserved. |
 
@@ -275,18 +248,15 @@ ctest --test-dir build -C Release --output-on-failure
 
 The executable examples below use a single-configuration build. With a multi-configuration generator, the C++ tools normally live in `build/Release` (with `.exe` on Windows); adjust direct tool paths accordingly. The Python renderer detects those Release locations automatically.
 
-The C++ tests use synthetic data and do not need the original firmware. An additional offline decoder test runs when Python is available. Research comparisons against original executables have separate dependencies and external inputs; see [verification](verification.md).
+The C++ tests use built-in tables and synthetic data and do not need the original firmware. Independent scalar audio equations and an offline decoder test run when Python is available. Research comparisons against original executables have separate dependencies and external inputs; see [verification](verification.md).
 
-### Inspect firmware and recovered tables
+### Inspect built-in tables
 
 ```sh
-build/qsound_inspect firmware/WFM0001A.CSP
-build/qsound_inspect firmware/WFM0001A.CSP --instructions
-build/qsound_inspect firmware/WFM0001A.CSP --extensions
-build/qsound_tables firmware/WFM0001A.CSP
+build/qsound_tables
 ```
 
-The inspector prints metadata and optionally decoded instruction words or only the unrecognised instruction formats. The tables tool writes JSON containing all four banks, filters, delays and position gains. Each JSON position row is ordered `direct_left`, `direct_right`, `filtered_left`, `filtered_right`. Both tools also accept a raw `MAIN.PVL` path. Instruction inspection does not execute the DSP.
+This writes JSON containing all four built-in banks, filters, delays and position gains. Each position row is ordered `direct_left`, `direct_right`, `filtered_left`, `filtered_right`. Giving the tool a CSP or PVL path instead inspects external coefficients. `qsound_inspect FILE`, optionally with `--instructions` or `--extensions`, is available for firmware research; it does not execute the DSP.
 
 ### Render WAV input to FLAC
 
@@ -294,34 +264,70 @@ With Python and the `flac` command-line encoder available:
 
 ```sh
 python3 tools/render_spatial_model.py sample.wav --output research/renders/sample \
-  --firmware firmware/WFM0001A.CSP --firmware-rate 8000 \
+  --bank-rate 8000 \
   --position 0 --right-position 16
 ```
 
-The renderer accepts uncompressed mono/stereo **unsigned 8-bit or signed 16-bit PCM WAV**. Mono occupies the first input lane; stereo supplies both. It preserves the WAV playback rate, appends a silent filter tail and produces four maximum-compression FLACs, one per arithmetic combination, plus `model-renders.json` with hashes and comparisons. It does not play audio.
+The renderer accepts uncompressed mono/stereo **unsigned 8-bit or signed 16-bit PCM WAV**. Mono occupies the first input lane; stereo supplies both. It preserves the WAV playback rate, appends a silent filter tail and produces four maximum-compression FLACs, one per arithmetic combination, plus `model-renders.json` with the table source, selected coefficient hash, input/output hashes and comparisons. It does not play audio.
 
-Defaults are firmware `firmware/WFM0001A.CSP`, bank 8000, and position 16 for each input. `--output` is required. `--position` controls the first input, `--right-position` the second, both limited to 0–32. `--firmware` also accepts `MAIN.PVL`. `--probe` and `--tables` override the default executables `build/qsound_model_probe` and `build/qsound_tables`. The renderer also checks `build/Release` and uses the `.exe` suffix on Windows, supporting single- and multi-configuration generators. Selecting a bank does not resample the WAV: for rate-matched processing, supply a WAV at that bank's rate; for TFX auditions, preserve its original sample timing instead.
+Defaults are the built-in 8000 bank and position 16 for each input. `--bank-rate` selects another bank; `--firmware-rate` remains an alias. `--output` is required. `--position` controls the first input, `--right-position` the second, both limited to 0–32. `--firmware FILE` explicitly replaces the built-in tables with data recovered from a CSP or `MAIN.PVL` for research. `--probe` and `--tables` override the default executables `build/qsound_model_probe` and `build/qsound_tables`. The renderer also checks `build/Release` and uses the `.exe` suffix on Windows, supporting single- and multi-configuration generators. Selecting a bank does not resample the WAV: for rate-matched processing, supply a WAV at that bank's rate; for TFX auditions, preserve its original sample timing instead.
 
 ### Process a raw PCM stream
 
 ```sh
-build/qsound_model_probe firmware/WFM0001A.CSP 8000 0 16 floor each \
+build/qsound_model_probe 8000 0 16 floor each \
   < input-stereo-s16le.pcm > output-stereo-s16le.pcm
 ```
 
-Arguments are `FIRMWARE RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output`. Firmware can be CSP or PVL. Input and output are headerless, interleaved **left then right, signed 16-bit little-endian**, four bytes per frame. For mono input, interleave a silent second lane first. The tool neither resamples nor appends a tail; append zero frames yourself if required. It uses strict 0–32 positions, so it cannot directly audition the clamp policy. Invalid arguments or incomplete input frames produce a nonzero exit status and a diagnostic on stderr. The probe selects binary mode for standard input and output on Windows, preserving PCM bytes when invoked directly or through the Python renderer.
+Arguments are `RATE LEFT_POSITION RIGHT_POSITION floor|nearest each|output`, optionally followed by `--firmware FILE` for research. The older firmware-first form is also accepted for existing research scripts. Input and output are headerless, interleaved **left then right, signed 16-bit little-endian**, four bytes per frame. For mono input, interleave a silent second lane first. The tool neither resamples nor appends a tail; append zero frames yourself if required. It uses strict 0–32 positions, so it cannot directly audition the clamp policy. Invalid arguments or incomplete input frames produce a nonzero exit status and a diagnostic on stderr. The probe selects binary mode for standard input and output on Windows, preserving PCM bytes when invoked directly or through the Python renderer.
 
 `qsound_control_probe` is a controller regression utility. Each whitespace-separated input row contains `phase increment movement_word cached_position tick_count` as decimal integers. Each requested tick produces `phase cached_position changed_position`, with `-1` for no publication. The printed phase is after advancement. It reads no audio or firmware.
 
+## Optional firmware research
+
+The built-in defaults are sufficient for normal use. For extraction experiments or comparison with another firmware asset, compile the optional research sources in addition to the runtime sources:
+
+```cmake
+target_sources(your_program PRIVATE ${QSOUND_RESEARCH_SOURCES})
+```
+
+Include `"qsound/upgrade.h"`, decode the supplied bytes with `decode_firmware_asset`, select a function with `select_qsound_function`, and call `recover_spatial_tables`. The returned tables can be passed to the same processor constructor. The ordinary `${QSOUND_SOURCES}` list intentionally excludes these parsers and inspection functions.
+
+From the repository root, this optional standard-library-only Python script downloads Creative's archived upgrade and extracts the firmware:
+
+```sh
+python3 tools/fetch_firmware.py
+```
+
+The default output is `firmware/WFM0001A.CSP`. Correct existing output is verified and reused; missing or damaged output is replaced. Downloads retry transient failures and verify pinned hashes. For an existing upgrade archive or a different destination:
+
+```sh
+python3 tools/fetch_firmware.py --archive /path/to/CSPU.ZIP --output /path/to/WFM0001A.CSP
+```
+
+The C++ entry point `decode_firmware_asset(bytes)` accepts either:
+
+| Bytes supplied by the application | Handling |
+| --- | --- |
+| An original RIFF/CSP firmware file, such as `WFM0001A.CSP` | Validate and decode the container and programs. |
+| The `MAIN.PVL` member extracted from Creative's upgrade ZIP | Unpack its first bounded binary-literal PKWARE DCL stream in C++, then validate and decode the resulting CSP. |
+
+Pass the file's contents as `std::span<uint8_t const>`. The component does not open paths, search directories or fetch data. It does not accept `CSPU.ZIP` itself: extract `MAIN.PVL` using your application's existing ZIP tooling first. Using that member allows native runtime loading without Python. The original firmware retains its own terms; [firmware provenance](firmware.md) records the reference files and hashes.
+
+Use `decode_firmware(bytes)` instead when you specifically require an already unpacked CSP. Both loaders return decoded functions; select a QSound playback function with `select_qsound_function(functions, firmware_rate)`, then pass it to `recover_spatial_tables`.
+
+The selector accepts exactly **8000, 11025, 22050 or 44100**. It rejects absent or ambiguous matches. Table recovery requires the recognised QSound program layout; accepting a CSP container does not imply every codec or firmware revision can be rendered.
+
 ## Public API reference
 
-All symbols below are in namespace `qsound`. Headers are self-contained; include the one declaring the feature you use.
+Public processing symbols are in namespace `qsound`; named built-in arrays are in `qsound::coefficients`. Firmware and instruction functions require the optional research source list. Headers are self-contained; include the one declaring the feature you use.
 
 | Header | Types and operations |
 | --- | --- |
 | [`qsound/upgrade.h`](../qsound/upgrade.h) | `decode_firmware_asset(bytes)` handles CSP or upgrade PVL. `unpack_upgrade_firmware(bytes, maximum_bytes)` returns the first unpacked DCL member; the default output limit is `maximum_upgrade_firmware_bytes` (65,536). |
 | [`qsound/firmware.h`](../qsound/firmware.h) | `decode_firmware(bytes)`, `select_qsound_function(functions, rate)`, `decode_program(bytes)`, `unscramble_byte(value)`; `program`, `function_description`, `firmware_function`, `format_error`, `program_capacity` (512 instructions). |
-| [`qsound/spatial_tables.h`](../qsound/spatial_tables.h) | `recover_spatial_tables(function)`; `spatial_tables`, `filter_coefficients`, `position_gains`, `spatial_position_count` (33). |
+| [`qsound/coefficients.h`](../qsound/coefficients.h) | Editable `coefficients::positions` and `coefficients::bank_8000`, `bank_11025`, `bank_22050`, `bank_44100` definitions. |
+| [`qsound/spatial_tables.h`](../qsound/spatial_tables.h) | `make_spatial_tables(rate)` for owned built-in defaults; optional `recover_spatial_tables(function)`; `spatial_tables`, `filter_coefficients`, `position_gains`, `spatial_position_count` (33). |
 | [`qsound/spatial_model.h`](../qsound/spatial_model.h) | `spatial_model(tables, arithmetic, positions = position_policy::reject)`; `set_positions(left, right)`, `process(input)`, `reset()`; `pcm_inputs`, `stereo_sample` and the arithmetic/position policy types. |
 | [`qsound/position_sweep.h`](../qsound/position_sweep.h) | `position_sweep(parameters = {}, previous_position = 0xff)`; `set(parameters)`, `tick()`, `value()`, `last_position()`; `sweep_parameters`, `position_phase`. |
 | [`qsound/instruction.h`](../qsound/instruction.h) | `classify_instruction(word)`, `format_name(format)`, `describe_instruction(word)`, `instruction_format` for research/inspection. These recognise documented older instruction formats and identify unknown extensions; they do not execute firmware. |

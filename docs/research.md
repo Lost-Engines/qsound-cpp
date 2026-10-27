@@ -15,7 +15,7 @@ This project targets Creative's CT1748 ASP/CSP implementation of QSound, not Cap
 
 ## Current implementation
 
-The component decodes original firmware, recovers its spatial tables, processes stereo PCM and reproduces TFX's position controller. TFX C++ uses this source directly. Arithmetic choices and endpoint compatibility are explicit application policies.
+The runtime processes stereo PCM from built-in numerical tables and reproduces TFX's position controller. Optional development tools decode original firmware and recover its tables for verification. TFX C++ uses this source directly. Arithmetic choices and endpoint compatibility are explicit application policies.
 
 There is no general ST18932 instruction executor. The [remaining instruction and arithmetic questions](dsp-semantics.md) limit claims of original-card equivalence, while [verification](verification.md) records the independent data/model comparisons and original x86 traces supporting the implementation.
 

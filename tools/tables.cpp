@@ -23,19 +23,22 @@ void print_filter(qsound::filter_coefficients const &filter) {
 } // anonymous namespace
 
 auto main(int const argc, char const *const *argv)->int try {
-  if(argc != 2) {
-    std::println(std::cerr, "Usage: qsound_tables FIRMWARE");
+  if(argc != 1 && argc != 2) {
+    std::println(std::cerr, "Usage: qsound_tables [FIRMWARE] (default: built-in coefficients)");
     return EXIT_FAILURE;
   }
-  std::ifstream file{argv[1], std::ios::binary};
-  if(!file) throw std::runtime_error{"cannot open firmware file"};
-  std::vector<std::uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-  auto const firmware{qsound::decode_firmware_asset(bytes)};
+  std::vector<qsound::firmware_function> firmware;
+  if(argc == 2) {
+    std::ifstream file{argv[1], std::ios::binary};
+    if(!file) throw std::runtime_error{"cannot open firmware file"};
+    std::vector<uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    firmware = qsound::decode_firmware_asset(bytes);
+  }
   std::print("[");
   bool first_function{true};
   for(unsigned int const rate : {44'100u, 22'050u, 11'025u, 8'000u}) {
-    auto const &function{qsound::select_qsound_function(firmware, rate)};
-    auto const tables{qsound::recover_spatial_tables(function)};
+    auto const tables{firmware.empty() ? qsound::make_spatial_tables(rate)
+      : qsound::recover_spatial_tables(qsound::select_qsound_function(firmware, rate))};
     std::print("{}{{\"rate\":{},\"direct_delay_samples\":{},\"left_filter\":", first_function ? "" : ",", rate, tables.direct_delay_samples);
     print_filter(tables.left_filter);
     std::print(",\"right_filter\":");

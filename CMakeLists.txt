@@ -17,13 +17,13 @@ function(configure_qsound_tool target)
   )
 endfunction()
 
-add_executable(qsound_inspect tools/inspect.cpp ${QSOUND_SOURCES})
+add_executable(qsound_inspect tools/inspect.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_inspect)
 
-add_executable(qsound_model_probe tools/model_probe.cpp ${QSOUND_SOURCES})
+add_executable(qsound_model_probe tools/model_probe.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_model_probe)
 
-add_executable(qsound_tables tools/tables.cpp ${QSOUND_SOURCES})
+add_executable(qsound_tables tools/tables.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_tables)
 
 add_executable(qsound_control_probe tools/control_probe.cpp ${QSOUND_SOURCES})
@@ -38,7 +38,7 @@ if(BUILD_TESTING)
     )
   endfunction()
 
-  add_executable(qsound_upgrade_test tests/upgrade_test.cpp ${QSOUND_SOURCES})
+  add_executable(qsound_upgrade_test tests/upgrade_test.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
   configure_qsound_test(qsound_upgrade_test)
   add_test(NAME firmware.upgrade_dcl COMMAND qsound_upgrade_test)
   add_executable(qsound_model_test tests/model_test.cpp ${QSOUND_SOURCES})
@@ -47,11 +47,15 @@ if(BUILD_TESTING)
   add_executable(qsound_control_test tests/control_test.cpp ${QSOUND_SOURCES})
   configure_qsound_test(qsound_control_test)
   add_test(NAME control.position_sweep COMMAND qsound_control_test)
-  add_executable(qsound_firmware_test tests/firmware_test.cpp ${QSOUND_SOURCES})
+  add_executable(qsound_firmware_test tests/firmware_test.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
   configure_qsound_test(qsound_firmware_test)
   add_test(NAME firmware.formats_and_bounds COMMAND qsound_firmware_test)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_FOUND)
+    add_test(NAME model.reference_equations COMMAND "${Python3_EXECUTABLE}" -B
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_spatial_model.py"
+      --probe "$<TARGET_FILE:qsound_model_probe>" --tables "$<TARGET_FILE:qsound_tables>"
+    )
     add_test(NAME firmware.fetch_decoder COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/fetch_firmware_test.py")
   endif()
 endif()

@@ -3,7 +3,8 @@
 
 Outputs maximum-compression FLACs plus a comparison manifest. These are
 analytical-model auditions, not recordings or verified original QSound output.
-An external original firmware file, model probe and FLAC encoder are required.
+Uses built-in coefficients by default; --firmware selects an external research asset.
+The model probe and FLAC encoder are required.
 """
 import argparse
 from array import array
@@ -62,8 +63,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--firmware', type=Path, default=Path('firmware/WFM0001A.CSP'))
-    parser.add_argument('--firmware-rate', type=int, choices=(8000, 11025, 22050, 44100), default=8000,
+    parser.add_argument('--firmware', type=Path, help='optional CSP/PVL override for research; otherwise use built-in coefficients')
+    parser.add_argument('--bank-rate', '--firmware-rate', dest='firmware_rate', type=int, choices=(8000, 11025, 22050, 44100), default=8000,
                         help='bank selection, independently of the input playback rate; TFX chooses 8000')
     parser.add_argument('--position', type=int, choices=range(33), default=16)
     parser.add_argument('--right-position', type=int, choices=range(33), default=16)
@@ -72,7 +73,7 @@ def main():
     args = parser.parse_args()
     if not args.input.is_file():
         parser.error(f'input WAV not found: {args.input}')
-    if not args.firmware.is_file():
+    if args.firmware and not args.firmware.is_file():
         parser.error(f'firmware not found: {args.firmware}; run python3 tools/fetch_firmware.py or pass --firmware')
     for label, path in (('probe', args.probe), ('tables', args.tables)):
         if not path.is_file():
@@ -81,7 +82,8 @@ def main():
     if not encoder:
         parser.error('the flac command-line encoder is required; install it and make it available on PATH')
     rate, frames, pcm = read_pcm(args.input)
-    tables = json.loads(subprocess.check_output([str(args.tables.resolve()), str(args.firmware.resolve())]))
+    table_command = [str(args.tables.resolve())] + ([str(args.firmware.resolve())] if args.firmware else [])
+    tables = json.loads(subprocess.check_output(table_command))
     selected = next(row for row in tables if row['rate'] == args.firmware_rate)
     tail = max(len(selected['left_filter']['taps']), len(selected['right_filter']['taps']), selected['direct_delay_samples']) + 1
     pcm += bytes(tail * 4)
@@ -90,8 +92,10 @@ def main():
     renders = []
     for rounding in ('floor', 'nearest'):
         for accumulation in ('each', 'output'):
-            result = subprocess.check_output([str(args.probe.resolve()), str(args.firmware.resolve()),
-                str(args.firmware_rate), str(args.position), str(args.right_position), rounding, accumulation], input=pcm)
+            command = [str(args.probe.resolve()), str(args.firmware_rate), str(args.position), str(args.right_position), rounding, accumulation]
+            if args.firmware:
+                command += ['--firmware', str(args.firmware.resolve())]
+            result = subprocess.check_output(command, input=pcm)
             if len(result) != len(pcm):
                 raise ValueError('model output does not match the input frame count')
             decoded = signed_samples(result)
@@ -108,7 +112,9 @@ def main():
                                 rail_samples=sum(value in (-32768, 32767) for value in decoded)))
     manifest = dict(scope='Analytical spatial-path model, not verified ST18932 audio; static source positions.',
                     input=str(args.input.resolve()), input_sha256=hashlib.sha256(args.input.read_bytes()).hexdigest(),
-                    firmware_sha256=hashlib.sha256(args.firmware.read_bytes()).hexdigest(),
+                    table_source=str(args.firmware.resolve()) if args.firmware else 'built-in',
+                    coefficient_sha256=hashlib.sha256(json.dumps(selected, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
+                    firmware_sha256=hashlib.sha256(args.firmware.read_bytes()).hexdigest() if args.firmware else None,
                     playback_rate=rate, input_frames=frames, tail_frames=tail,
                     firmware_rate=args.firmware_rate, left_position=args.position,
                     right_position=args.right_position, renders=renders)
