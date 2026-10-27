@@ -6,6 +6,8 @@ The intended integration is source inclusion: include the `qsound/` headers and 
 
 **Firmware loading, spatial-table recovery and the original TFX pan-sweep controller are implemented. An offline audio model is available with explicit arithmetic assumptions; original DSP output remains unverified.** See the [remaining instruction-semantics gaps](docs/blocker.md) and [original-code control comparisons](docs/tfx-control.md). Original Creative firmware is external input and is not included in this repository. See [research notes](docs/research.md) for the evidence and remaining questions.
 
+**[Complete usage guide](docs/usage.md)**: source inclusion, firmware setup, C++ buffer-processing examples, positioning, sample rates, streaming state, the optional TFX controller and command-line tools.
+
 ## Build and inspect
 
 ```sh

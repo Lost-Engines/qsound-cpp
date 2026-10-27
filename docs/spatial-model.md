@@ -1,6 +1,6 @@
 # Analytical audio model
 
-`qsound::spatial_model` turns the recovered firmware tables into stereo PCM. It is a port of the inferred two-input signal path, with explicit arithmetic hypotheses. It is **not an ST18932 instruction emulator or verified physical-card output**. TFX has not been switched to this processor.
+`qsound::spatial_model` turns the recovered firmware tables into stereo PCM. It is a port of the inferred two-input signal path, with explicit arithmetic hypotheses. It is **not an ST18932 instruction emulator or verified physical-card output**. TFX C++ uses this processor with the explicit policies described below.
 
 ## What it preserves
 
@@ -22,6 +22,8 @@ Both assume signed Q15 gains and coefficients, a fractional 16-by-16 product ali
 The default `position_policy::reject` accepts recovered positions 0–32 and rejects unresolved inputs. A caller can explicitly choose `position_policy::clamp_to_endpoints` as the constructor’s third argument. This maps every value above 32 to the right endpoint, including TFX’s speech position 33 and larger wrapped sweep bytes. It leaves `position_sweep` and its verified unsigned wrapping unchanged. The mapping is a compatibility policy; actual DSP behaviour outside the table remains unresolved. It does not implement the four-input path, host command interpreter, VU meters or hardware sample interface.
 
 ## Use
+
+See the [complete usage guide](usage.md) for firmware loading, compilable integration helpers, PCM formats, source positioning, streaming and timing.
 
 ```cpp
 auto const functions{qsound::decode_firmware(bytes)};
