@@ -10,14 +10,14 @@ inline unsigned int constexpr spatial_position_count{33};
 
 struct filter_coefficients {
   unsigned int address{};
-  std::vector<std::int16_t> taps;
+  std::vector<int16_t> taps;
 };
 
 struct position_gains {
-  std::int16_t direct_left{};
-  std::int16_t direct_right{};
-  std::int16_t filtered_left{};
-  std::int16_t filtered_right{};
+  int16_t direct_left{};
+  int16_t direct_right{};
+  int16_t filtered_left{};
+  int16_t filtered_right{};
 };
 
 struct spatial_tables {

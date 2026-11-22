@@ -19,8 +19,8 @@ enum class instruction_format {
   undocumented,
 };
 
-instruction_format classify_instruction(std::uint32_t word) noexcept;
+instruction_format classify_instruction(uint32_t word) noexcept;
 std::string_view format_name(instruction_format format) noexcept;
-std::string describe_instruction(std::uint32_t word);
+std::string describe_instruction(uint32_t word);
 
 } // namespace qsound

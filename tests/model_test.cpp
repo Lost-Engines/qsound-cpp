@@ -9,7 +9,7 @@
 
 namespace {
 
-auto tables(unsigned int const delay, std::vector<std::int16_t> taps, qsound::position_gains const gains)->qsound::spatial_tables {
+auto tables(unsigned int const delay, std::vector<int16_t> taps, qsound::position_gains const gains)->qsound::spatial_tables {
   qsound::spatial_tables result{
     .left_filter{
       .address{},
@@ -60,7 +60,7 @@ auto main()->int {
         .filtered_left{32767},
         .filtered_right{},
       }), arithmetic};
-      for(std::int16_t const input : std::array<std::int16_t, 6>{-32768, -2000, 0, 1, 2000, 32767}) {
+      for(int16_t const input : std::array<int16_t, 6>{-32768, -2000, 0, 1, 2000, 32767}) {
         auto const result{cancellation.process({.left{input}, .right{}})};
         assert(result.left == 0 && result.right == 0 && "unity negative FIR cancels the identical direct bus");
       }
@@ -95,8 +95,8 @@ auto main()->int {
   auto endpoint_tables{tables(0, {0}, {})};
   for(unsigned int position{}; position != qsound::spatial_position_count; ++position) {
     endpoint_tables.positions[position] = {
-      .direct_left{static_cast<std::int16_t>(position * 512)},
-      .direct_right{static_cast<std::int16_t>(16384 - position * 256)},
+      .direct_left{static_cast<int16_t>(position * 512)},
+      .direct_right{static_cast<int16_t>(16384 - position * 256)},
       .filtered_left{},
       .filtered_right{},
     };

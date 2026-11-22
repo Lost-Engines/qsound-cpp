@@ -8,8 +8,8 @@
 namespace qsound {
 namespace {
 
-auto signed_word(std::uint32_t const value)->std::int16_t {
-  return std::bit_cast<std::int16_t>(static_cast<std::uint16_t>(value));
+auto signed_word(uint32_t const value)->int16_t {
+  return std::bit_cast<int16_t>(static_cast<uint16_t>(value));
 }
 
 void require(bool const condition) {
@@ -59,11 +59,11 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
   }
   require(pc + 1 < initialiser.size && zero_b);
   pc += 2;
-  std::array<std::optional<std::int16_t>, table_words> words{};
+  std::array<std::optional<int16_t>, table_words> words{};
   int forward{};
   int backward{static_cast<int>(reverse_start)};
-  std::optional<std::int16_t> accumulator;
-  std::optional<std::int16_t> result;
+  std::optional<int16_t> accumulator;
+  std::optional<int16_t> result;
   while(pc < initialiser.size) {
     auto const word{initialiser.instructions[pc++]};
     if((word & 0xfffe0000u) == 0x742a0000u) {
@@ -71,12 +71,12 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
       if(word & 0x10000u) accumulator = result;
       continue;
     }
-    if(word == 0xfc600084u) break;                                              // next section initializes the delay rings
+    if(word == 0xfc600084u) break;                                             // next section initializes the delay rings
     auto const source{(word >> 12) & 7u};
     auto const destination{(word >> 1) & 7u};
     require((word & 0xffffc0ffu) == 0x04000008u || (word & 0xffffc0ffu) == 0x0400000au);
     require((destination == 4 && ((word >> 8) & 3u) == 1) || (destination == 5 && ((word >> 8) & 3u) == 3));
-    std::optional<std::int16_t> value;
+    std::optional<int16_t> value;
     if(source == 0) value = result;
     else if(source == 2) value = accumulator;
     else if(source == 3) value = 0;

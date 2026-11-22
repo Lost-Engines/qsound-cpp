@@ -1,5 +1,4 @@
 #include "upgrade.h"
-
 #include <algorithm>
 #include <array>
 
@@ -7,12 +6,12 @@ namespace qsound {
 namespace {
 
 class bit_reader {
-  std::span<std::uint8_t const> input;
-  std::size_t byte{};
+  std::span<uint8_t const> input;
+  size_t byte{};
   unsigned int bit{};
 
 public:
-  explicit bit_reader(std::span<std::uint8_t const> const input) : input{input} {}
+  explicit bit_reader(std::span<uint8_t const> const input) : input{input} {}
 
   auto read(unsigned int const count)->unsigned int {
     unsigned int result{};
@@ -33,7 +32,7 @@ struct huffman_table {
   std::array<unsigned int, 64> symbols{};
 };
 
-template<std::size_t Count>
+template<size_t Count>
 constexpr auto make_table(std::array<unsigned int, Count> const &packed)->huffman_table {
   std::array<unsigned int, 64> lengths{};
   unsigned int size{};
@@ -75,17 +74,17 @@ auto symbol(bit_reader &bits, huffman_table const &table)->unsigned int {
 
 } // anonymous namespace
 
-std::vector<std::uint8_t> unpack_upgrade_firmware(std::span<std::uint8_t const> const bytes, unsigned int const maximum_bytes) {
+std::vector<uint8_t> unpack_upgrade_firmware(std::span<uint8_t const> const bytes, unsigned int const maximum_bytes) {
   bit_reader bits{bytes};
   if(bits.read(8) != 0) throw std::invalid_argument{"expected binary-literal DCL firmware stream"};
   auto const dictionary{bits.read(8)};
   if(dictionary < 4 || dictionary > 6) throw std::invalid_argument{"invalid DCL firmware dictionary size"};
-  std::vector<std::uint8_t> output;
+  std::vector<uint8_t> output;
   output.reserve(std::min(maximum_bytes, maximum_upgrade_firmware_bytes));
   for(;;) {
     if(!bits.read(1)) {
       if(output.size() == maximum_bytes) throw std::invalid_argument{"DCL firmware output exceeds extraction limit"};
-      output.push_back(static_cast<std::uint8_t>(bits.read(8)));
+      output.push_back(static_cast<uint8_t>(bits.read(8)));
       continue;
     }
     auto const code{symbol(bits, length_codes)};
@@ -100,7 +99,7 @@ std::vector<std::uint8_t> unpack_upgrade_firmware(std::span<std::uint8_t const> 
   }
 }
 
-std::vector<firmware_function> decode_firmware_asset(std::span<std::uint8_t const> const bytes) {
+std::vector<firmware_function> decode_firmware_asset(std::span<uint8_t const> const bytes) {
   if(bytes.size() >= 4 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F') return decode_firmware(bytes);
   return decode_firmware(unpack_upgrade_firmware(bytes));
 }

@@ -6,7 +6,7 @@
 
 auto main()->int {
   // Public binary-literal DCL example: an overlapping backward copy.
-  std::array<std::uint8_t, 8> constexpr compressed{0x00, 0x04, 0x82, 0x24, 0x25, 0x8f, 0x80, 0x7f};
+  std::array<uint8_t, 8> constexpr compressed{0x00, 0x04, 0x82, 0x24, 0x25, 0x8f, 0x80, 0x7f};
   auto const output{qsound::unpack_upgrade_firmware(compressed)};
   assert(std::string(output.begin(), output.end()) == "AIAIAIAIAIAIA");
   for(unsigned int length{}; length != compressed.size(); ++length) {
@@ -25,7 +25,7 @@ auto main()->int {
     rejected = true;
   }
   assert(rejected && qsound::unpack_upgrade_firmware(compressed, 13) == output);
-  for(auto const header : {std::array<std::uint8_t, 2>{1, 4}, {0, 3}, {0, 7}}) {
+  for(auto const header : {std::array<uint8_t, 2>{1, 4}, {0, 3}, {0, 7}}) {
     rejected = false;
     try {
       static_cast<void>(qsound::unpack_upgrade_firmware(header));

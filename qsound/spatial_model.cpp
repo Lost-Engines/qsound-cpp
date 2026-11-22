@@ -8,12 +8,12 @@ namespace qsound {
 namespace {
 
 unsigned int constexpr accumulator_word_shift{16};
-std::int64_t constexpr word_alignment{std::int64_t{1} << accumulator_word_shift};
-std::int64_t constexpr product_alignment{2};
+int64_t constexpr word_alignment{int64_t{1} << accumulator_word_shift};
+int64_t constexpr product_alignment{2};
 
-auto saturate_accumulator(std::int64_t const value)->std::int64_t {
-  return std::clamp(value, static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::min()),
-    static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()));
+auto saturate_accumulator(int64_t const value)->int64_t {
+  return std::clamp(value, static_cast<int64_t>(std::numeric_limits<int32_t>::min()),
+    static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
 }
 
 } // anonymous namespace
@@ -47,38 +47,38 @@ void spatial_model::set_positions(unsigned int const left, unsigned int const ri
   right_gains = tables.positions[std::min(right, rightmost_position)];
 }
 
-std::int64_t spatial_model::accumulate(std::int64_t const previous, std::int64_t const product) const noexcept {
+int64_t spatial_model::accumulate(int64_t const previous, int64_t const product) const noexcept {
   auto const sum{previous + product};
   return arithmetic.accumulation == accumulation_model::saturate_each_mac ? saturate_accumulator(sum) : sum;
 }
 
-std::int16_t spatial_model::quantize(std::int64_t const value) const noexcept {
+int16_t spatial_model::quantize(int64_t const value) const noexcept {
   /// Compare the two rounding hypotheses with defined signed shifts and clipping
   auto const bounded{saturate_accumulator(value)};
   auto const rounded{bounded + (arithmetic.rounding == rounding_model::nearest ? word_alignment / 2 : 0)};
   auto const word{rounded >> accumulator_word_shift};
-  return static_cast<std::int16_t>(std::clamp(word, static_cast<std::int64_t>(std::numeric_limits<std::int16_t>::min()),
-    static_cast<std::int64_t>(std::numeric_limits<std::int16_t>::max())));
+  return static_cast<int16_t>(std::clamp(word, static_cast<int64_t>(std::numeric_limits<int16_t>::min()),
+    static_cast<int64_t>(std::numeric_limits<int16_t>::max())));
 }
 
-std::int16_t spatial_model::mix(pcm_inputs const input, std::int16_t const left_gain, std::int16_t const right_gain) const noexcept {
-  auto const left{static_cast<std::int64_t>(input.left) * left_gain * product_alignment};
-  auto const right{static_cast<std::int64_t>(input.right) * right_gain * product_alignment};
+int16_t spatial_model::mix(pcm_inputs const input, int16_t const left_gain, int16_t const right_gain) const noexcept {
+  auto const left{static_cast<int64_t>(input.left) * left_gain * product_alignment};
+  auto const right{static_cast<int64_t>(input.right) * right_gain * product_alignment};
   return quantize(accumulate(accumulate(0, left), right));
 }
 
-std::int16_t spatial_model::output(std::int16_t const direct, std::int16_t const filtered,
-  output_history &history, filter_coefficients const &filter) noexcept {
+int16_t spatial_model::output(int16_t const direct, int16_t const filtered,
+                              output_history &history, filter_coefficients const &filter) noexcept {
   /// Follow write/advance/read order: literal tap zero sees the oldest history word
   history.direct[history.direct_cursor] = direct;
   if(++history.direct_cursor == history.direct.size()) history.direct_cursor = 0;
   auto const delayed{history.direct[history.direct_cursor]};
   history.filtered[history.filter_cursor] = filtered;
   if(++history.filter_cursor == history.filtered.size()) history.filter_cursor = 0;
-  std::int64_t accumulator{static_cast<std::int64_t>(delayed) * word_alignment};
+  int64_t accumulator{static_cast<int64_t>(delayed) * word_alignment};
   auto cursor{history.filter_cursor};
   for(auto const coefficient : filter.taps) {
-    auto const product{static_cast<std::int64_t>(history.filtered[cursor]) * coefficient * product_alignment};
+    auto const product{static_cast<int64_t>(history.filtered[cursor]) * coefficient * product_alignment};
     accumulator = accumulate(accumulator, product);
     if(++cursor == history.filtered.size()) cursor = 0;
   }
@@ -98,7 +98,7 @@ stereo_sample spatial_model::process(pcm_inputs const input) noexcept {
 
 void spatial_model::reset() noexcept {
   /// Clear delay histories while retaining the selected source positions
-  auto const clear{[](output_history &history) {
+  auto const clear{[](output_history &history){
     std::ranges::fill(history.direct, 0);
     std::ranges::fill(history.filtered, 0);
     history.direct_cursor = history.filter_cursor = 0;

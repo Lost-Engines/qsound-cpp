@@ -1,6 +1,6 @@
-#include "spatial_tables.h"
 #include <stdexcept>
 #include "coefficients.h"
+#include "spatial_tables.h"
 
 namespace qsound {
 namespace {
