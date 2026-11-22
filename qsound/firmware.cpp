@@ -44,7 +44,7 @@ std::optional<chunk> chunks::next() {
     throw format_error{offset + 4, "RIFF chunk exceeds its parent"};
   }
   chunk const result{
-    .tag{reinterpret_cast<char const*>(bytes.data()), 4},
+    .tag{reinterpret_cast<char const *>(bytes.data()), 4},
     .data{bytes.subspan(8, size)},
     .offset{offset + 8},
   };
@@ -129,7 +129,7 @@ std::vector<firmware_function> decode_firmware(std::span<uint8_t const> const by
         };
       }
       if(!pending) throw format_error{item->offset, "function list has no description"};
-      if(std::ranges::any_of(functions, [&](auto const &function){ return function.description.number == pending->number; })) {
+      if(std::ranges::any_of(functions, [&](auto const &function){return function.description.number == pending->number;})) {
         throw format_error{item->offset, "duplicate function number"};
       }
     } else if(starts_with(item->data, "code")) {
@@ -164,11 +164,20 @@ std::vector<firmware_function> decode_firmware(std::span<uint8_t const> const by
 firmware_function const &select_qsound_function(std::span<firmware_function const> const functions, unsigned int const sample_rate) {
   unsigned int rate_flag{0};
   switch(sample_rate) {
-  case 8'000: rate_flag = 1; break;
-  case 11'025: rate_flag = 2; break;
-  case 22'050: rate_flag = 4; break;
-  case 44'100: rate_flag = 8; break;
-  default: throw std::invalid_argument{"QSound firmware supports 8000, 11025, 22050 or 44100 Hz"};
+  case 8'000:
+    rate_flag = 1;
+    break;
+  case 11'025:
+    rate_flag = 2;
+    break;
+  case 22'050:
+    rate_flag = 4;
+    break;
+  case 44'100:
+    rate_flag = 8;
+    break;
+  default:
+    throw std::invalid_argument{"QSound firmware supports 8000, 11025, 22050 or 44100 Hz"};
   }
   firmware_function const *selected{nullptr};
   for(auto const &function : functions) {

@@ -28,13 +28,13 @@ struct arithmetic_model {
 };
 
 struct pcm_inputs {
-  int16_t left{};
-  int16_t right{};
+  int16_t left{0};
+  int16_t right{0};
 };
 
 struct stereo_sample {
-  int16_t left{};
-  int16_t right{};
+  int16_t left{0};
+  int16_t right{0};
 };
 
 // Analytical port of the recovered two-input spatial path. Arithmetic policies
@@ -44,8 +44,8 @@ private:
   struct output_history {
     std::vector<int16_t> direct;
     std::vector<int16_t> filtered;
-    unsigned int direct_cursor{};
-    unsigned int filter_cursor{};
+    unsigned int direct_cursor{0};
+    unsigned int filter_cursor{0};
   };
 
   spatial_tables tables;

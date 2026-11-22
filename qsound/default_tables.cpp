@@ -27,11 +27,16 @@ spatial_tables make_bank(coefficients::filter_bank<TapCount> const &bank) {
 
 spatial_tables make_spatial_tables(unsigned int const sample_rate) {
   switch(sample_rate) {
-  case 8000: return make_bank(coefficients::bank_8000);
-  case 11025: return make_bank(coefficients::bank_11025);
-  case 22050: return make_bank(coefficients::bank_22050);
-  case 44100: return make_bank(coefficients::bank_44100);
-  default: throw std::invalid_argument{"QSound coefficient banks support 8000, 11025, 22050 or 44100 Hz"};
+  case 8000:
+    return make_bank(coefficients::bank_8000);
+  case 11025:
+    return make_bank(coefficients::bank_11025);
+  case 22050:
+    return make_bank(coefficients::bank_22050);
+  case 44100:
+    return make_bank(coefficients::bank_44100);
+  default:
+    throw std::invalid_argument{"QSound coefficient banks support 8000, 11025, 22050 or 44100 Hz"};
   }
 }
 

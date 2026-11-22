@@ -17,15 +17,24 @@ instruction_format classify_instruction(uint32_t const word) noexcept {
 
 std::string_view format_name(instruction_format const format) noexcept {
   switch(format) {
-  case instruction_format::indirect_calculation: return "OPIN";
-  case instruction_format::direct_calculation: return "OPDI";
-  case instruction_format::immediate_calculation: return "OPIM";
-  case instruction_format::shift: return "SHIFT";
-  case instruction_format::immediate_branch: return "BRI";
-  case instruction_format::computed_branch: return "BRC";
-  case instruction_format::register_transfer: return "SVR";
-  case instruction_format::initialise: return "INI";
-  case instruction_format::undocumented: return "EXTENSION";
+  case instruction_format::indirect_calculation:
+    return "OPIN";
+  case instruction_format::direct_calculation:
+    return "OPDI";
+  case instruction_format::immediate_calculation:
+    return "OPIM";
+  case instruction_format::shift:
+    return "SHIFT";
+  case instruction_format::immediate_branch:
+    return "BRI";
+  case instruction_format::computed_branch:
+    return "BRC";
+  case instruction_format::register_transfer:
+    return "SVR";
+  case instruction_format::initialise:
+    return "INI";
+  case instruction_format::undocumented:
+    return "EXTENSION";
   }
   return "INVALID";
 }
