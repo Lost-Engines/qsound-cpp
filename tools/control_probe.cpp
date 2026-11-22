@@ -11,10 +11,10 @@ auto main()->int {
     qsound::position_sweep sweep{
       {
         .position{static_cast<qsound::position_phase>(phase)},
-        .increment{static_cast<std::int16_t>(increment)},
+        .increment{static_cast<int16_t>(increment)},
         .moving{moving != 0},
       },
-      static_cast<std::uint8_t>(cached),
+      static_cast<uint8_t>(cached),
     };
     for(unsigned int tick{0}; tick != ticks; ++tick) {
       auto const changed{sweep.tick()};

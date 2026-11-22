@@ -13,7 +13,7 @@
 #if defined(_WIN32)
 #include <fcntl.h>
 #include <io.h>
-#endif
+#endif // defined(_WIN32)
 #include "qsound/firmware.h"
 #include "qsound/spatial_model.h"
 #include "qsound/upgrade.h"
@@ -27,10 +27,10 @@ auto number(std::string_view const text)->unsigned int {
   return result;
 }
 
-auto sample(char const low, char const high)->std::int16_t {
-  auto const bits{static_cast<std::uint16_t>(static_cast<unsigned char>(low)
+auto sample(char const low, char const high)->int16_t {
+  auto const bits{static_cast<uint16_t>(static_cast<unsigned char>(low)
     | (static_cast<unsigned int>(static_cast<unsigned char>(high)) << 8))};
-  return std::bit_cast<std::int16_t>(bits);
+  return std::bit_cast<int16_t>(bits);
 }
 
 } // anonymous namespace
@@ -48,7 +48,7 @@ auto main(int const argc, char const *const *argv)->int try {
   if(_setmode(_fileno(stdin), _O_BINARY) == -1 || _setmode(_fileno(stdout), _O_BINARY) == -1) {
     throw std::runtime_error{"cannot enable binary PCM streams"};
   }
-#endif
+#endif // defined(_WIN32)
   unsigned int const first{legacy_arguments ? 2u : 1u};
   auto const rate{number(argv[first])};
   char const *const firmware_path{legacy_arguments ? argv[1] : external_firmware ? argv[7] : nullptr};
@@ -61,7 +61,7 @@ auto main(int const argc, char const *const *argv)->int try {
     .rounding{rounding == "floor" ? qsound::rounding_model::floor : qsound::rounding_model::nearest},
     .accumulation{accumulation == "each" ? qsound::accumulation_model::saturate_each_mac : qsound::accumulation_model::saturate_output},
   };
-  auto tables{[&] {
+  auto tables{[&]{
     if(!firmware_path) return qsound::make_spatial_tables(rate);
     std::ifstream file{firmware_path, std::ios::binary};
     if(!file) throw std::runtime_error{"cannot open firmware file"};
@@ -77,8 +77,8 @@ auto main(int const argc, char const *const *argv)->int try {
       .left{sample(frame[0], frame[1])},
       .right{sample(frame[2], frame[3])},
     })};
-    auto const left{static_cast<std::uint16_t>(output.left)};
-    auto const right{static_cast<std::uint16_t>(output.right)};
+    auto const left{static_cast<uint16_t>(output.left)};
+    auto const right{static_cast<uint16_t>(output.right)};
     frame = {
       static_cast<char>(left & 255),
       static_cast<char>(left >> 8),

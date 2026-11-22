@@ -3,7 +3,7 @@
 
 namespace qsound {
 
-instruction_format classify_instruction(std::uint32_t const word) noexcept {
+instruction_format classify_instruction(uint32_t const word) noexcept {
   if((word >> 30) == 0) return instruction_format::indirect_calculation;
   if((word >> 29) == 2) return instruction_format::direct_calculation;
   if((word >> 27) == 14) return instruction_format::immediate_calculation;
@@ -30,7 +30,7 @@ std::string_view format_name(instruction_format const format) noexcept {
   return "INVALID";
 }
 
-std::string describe_instruction(std::uint32_t const word) {
+std::string describe_instruction(uint32_t const word) {
   auto const format{classify_instruction(word)};
   auto const name{format_name(format)};
   switch(format) {

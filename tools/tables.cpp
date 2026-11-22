@@ -5,8 +5,8 @@
 #include <print>
 #include <vector>
 #include "qsound/firmware.h"
-#include "qsound/upgrade.h"
 #include "qsound/spatial_tables.h"
+#include "qsound/upgrade.h"
 
 namespace {
 

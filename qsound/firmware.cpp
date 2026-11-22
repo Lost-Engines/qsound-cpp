@@ -7,30 +7,30 @@
 namespace qsound {
 namespace {
 
-std::uint16_t little_word(std::span<std::uint8_t const> const bytes) {
-  return static_cast<std::uint16_t>(bytes[0] | (static_cast<unsigned int>(bytes[1]) << 8));
+uint16_t little_word(std::span<uint8_t const> const bytes) {
+  return static_cast<uint16_t>(bytes[0] | (static_cast<unsigned int>(bytes[1]) << 8));
 }
 
-std::uint32_t little_dword(std::span<std::uint8_t const> const bytes) {
-  return static_cast<std::uint32_t>(bytes[0]) | (static_cast<std::uint32_t>(bytes[1]) << 8)
-    | (static_cast<std::uint32_t>(bytes[2]) << 16) | (static_cast<std::uint32_t>(bytes[3]) << 24);
+uint32_t little_dword(std::span<uint8_t const> const bytes) {
+  return static_cast<uint32_t>(bytes[0]) | (static_cast<uint32_t>(bytes[1]) << 8)
+    | (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24);
 }
 
 struct chunk {
   std::string_view tag;
-  std::span<std::uint8_t const> data;
-  std::size_t offset;
+  std::span<uint8_t const> data;
+  size_t offset;
 };
 
 class chunks {
-  std::span<std::uint8_t const> bytes;
-  std::size_t offset;
+  std::span<uint8_t const> bytes;
+  size_t offset;
 public:
-  chunks(std::span<std::uint8_t const> bytes, std::size_t offset);
+  chunks(std::span<uint8_t const> bytes, size_t offset);
   std::optional<chunk> next();
 };
 
-chunks::chunks(std::span<std::uint8_t const> const bytes, std::size_t const offset)
+chunks::chunks(std::span<uint8_t const> const bytes, size_t const offset)
   : bytes{bytes},
     offset{offset} {
 }
@@ -38,8 +38,8 @@ chunks::chunks(std::span<std::uint8_t const> const bytes, std::size_t const offs
 std::optional<chunk> chunks::next() {
   if(bytes.empty()) return std::nullopt;
   if(bytes.size() < 8) throw format_error{offset, "truncated RIFF chunk header"};
-  std::size_t const size{little_dword(bytes.subspan(4))};
-  std::size_t const padding{size & 1u};
+  size_t const size{little_dword(bytes.subspan(4))};
+  size_t const padding{size & 1u};
   if(size > bytes.size() - 8 || padding > bytes.size() - 8 - size) {
     throw format_error{offset + 4, "RIFF chunk exceeds its parent"};
   }
@@ -53,7 +53,7 @@ std::optional<chunk> chunks::next() {
   return result;
 }
 
-bool starts_with(std::span<std::uint8_t const> const bytes, std::string_view const value) {
+bool starts_with(std::span<uint8_t const> const bytes, std::string_view const value) {
   return bytes.size() >= value.size() && std::ranges::equal(bytes.first(value.size()), value);
 }
 
@@ -67,12 +67,12 @@ program read_program(chunk const &source) {
 
 } // anonymous namespace
 
-format_error::format_error(std::size_t const offset, char const *message)
+format_error::format_error(size_t const offset, char const *message)
   : std::runtime_error{message},
     offset{offset} {
 }
 
-program decode_program(std::span<std::uint8_t const> const bytes) {
+program decode_program(std::span<uint8_t const> const bytes) {
   unsigned int constexpr trailer_size{4};
   unsigned int constexpr instruction_size{4};
   if(bytes.size() < instruction_size + trailer_size) throw format_error{0, "program has no complete instruction"};
@@ -81,8 +81,8 @@ program decode_program(std::span<std::uint8_t const> const bytes) {
   auto const encoded{bytes.first(bytes.size() - trailer_size)};
   unsigned int sum{0};
   for(auto const value : encoded) sum += value;
-  std::uint16_t const checksum{little_word(bytes.last(trailer_size))};
-  if(static_cast<std::uint16_t>(sum) != checksum) throw format_error{encoded.size(), "program checksum mismatch"};
+  uint16_t const checksum{little_word(bytes.last(trailer_size))};
+  if(static_cast<uint16_t>(sum) != checksum) throw format_error{encoded.size(), "program checksum mismatch"};
   program result{
     .instructions{},
     .size{static_cast<unsigned int>(encoded.size() / instruction_size)},
@@ -90,17 +90,17 @@ program decode_program(std::span<std::uint8_t const> const bytes) {
     .identifier{little_word(bytes.last(2))},
   };
   for(unsigned int i{0}; i != result.size; ++i) {
-    std::uint32_t word{0};
+    uint32_t word{0};
     for(unsigned int byte{0}; byte != instruction_size; ++byte) {
-      word |= static_cast<std::uint32_t>(unscramble_byte(encoded[i * instruction_size + byte])) << (byte * 8);
+      word |= static_cast<uint32_t>(unscramble_byte(encoded[i * instruction_size + byte])) << (byte * 8);
     }
     result.instructions[i] = word;
   }
   return result;
 }
 
-std::vector<firmware_function> decode_firmware(std::span<std::uint8_t const> const bytes) {
-  std::size_t constexpr maximum_file_size{4 * 1024 * 1024};
+std::vector<firmware_function> decode_firmware(std::span<uint8_t const> const bytes) {
+  size_t constexpr maximum_file_size{4 * 1024 * 1024};
   if(bytes.size() > maximum_file_size) throw format_error{0, "firmware container exceeds the loading limit"};
   if(bytes.size() < 12 || !starts_with(bytes, "RIFF")) throw format_error{0, "expected RIFF firmware"};
   if(little_dword(bytes.subspan(4)) != bytes.size() - 8) throw format_error{4, "RIFF length does not match the file"};
@@ -129,7 +129,7 @@ std::vector<firmware_function> decode_firmware(std::span<std::uint8_t const> con
         };
       }
       if(!pending) throw format_error{item->offset, "function list has no description"};
-      if(std::ranges::any_of(functions, [&](auto const &function) { return function.description.number == pending->number; })) {
+      if(std::ranges::any_of(functions, [&](auto const &function){ return function.description.number == pending->number; })) {
         throw format_error{item->offset, "duplicate function number"};
       }
     } else if(starts_with(item->data, "code")) {
