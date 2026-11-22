@@ -9,8 +9,8 @@ auto main()->int {
   std::array<uint8_t, 8> constexpr compressed{0x00, 0x04, 0x82, 0x24, 0x25, 0x8f, 0x80, 0x7f};
   auto const output{qsound::unpack_upgrade_firmware(compressed)};
   assert(std::string(output.begin(), output.end()) == "AIAIAIAIAIAIA");
-  for(unsigned int length{}; length != compressed.size(); ++length) {
-    bool rejected{};
+  for(unsigned int length{0}; length != compressed.size(); ++length) {
+    bool rejected{false};
     try {
       static_cast<void>(qsound::unpack_upgrade_firmware(std::span{compressed}.first(length)));
     } catch(std::exception const &) {
@@ -18,7 +18,7 @@ auto main()->int {
     }
     assert(rejected);
   }
-  bool rejected{};
+  bool rejected{false};
   try {
     static_cast<void>(qsound::unpack_upgrade_firmware(compressed, 12));
   } catch(std::exception const &) {

@@ -70,9 +70,9 @@ template<typename F>
 void rejects(F const &function) {
   try {
     function();
-  } catch(std::invalid_argument const&) {
+  } catch(std::invalid_argument const &) {
     return;
-  } catch(qsound::format_error const&) {
+  } catch(qsound::format_error const &) {
     return;
   }
   throw std::runtime_error{"malformed firmware was accepted"};
@@ -96,41 +96,41 @@ auto main()->int {
     require(selected.description.number == 1 && selected.initialisers.size() == 1, "function metadata changed");
     require(selected.processing.size == 2 && selected.processing.instructions[0] == 0x742b'1234u, "instruction decoding changed");
     require(selected.processing.identifier == 0x1234, "program identifier changed");
-    rejects([&]{ qsound::select_qsound_function(functions, 48'000); });
-    rejects([&]{ qsound::select_qsound_function(functions, 22'050); });
+    rejects([&]{qsound::select_qsound_function(functions, 48'000);});
+    rejects([&]{qsound::select_qsound_function(functions, 22'050);});
     auto duplicate{functions};
     duplicate.push_back(selected);
-    rejects([&]{ qsound::select_qsound_function(duplicate, 44'100); });
+    rejects([&]{qsound::select_qsound_function(duplicate, 44'100);});
     for(size_t size{0}; size != file.size(); ++size) {
-      rejects([&]{ qsound::decode_firmware(std::span{file}.first(size)); });
+      rejects([&]{qsound::decode_firmware(std::span{file}.first(size));});
     }
     for(unsigned int byte{0}; byte != 4; ++byte) {
       auto broken{file};
       broken[4 + byte] ^= 0xff;
-      rejects([&]{ qsound::decode_firmware(broken); });
+      rejects([&]{qsound::decode_firmware(broken);});
     }
     // Keep the enclosing RIFF length valid while damaging a child's length.
     auto short_list{file};
     short_list[16] = 0xff;
-    rejects([&]{ qsound::decode_firmware(short_list); });
+    rejects([&]{qsound::decode_firmware(short_list);});
     auto duplicate_function{file};
     duplicate_function.insert(duplicate_function.end(), file.begin() + 12, file.end());
     auto const duplicated_size{static_cast<uint32_t>(duplicate_function.size() - 8)};
     for(unsigned int byte{0}; byte != 4; ++byte) duplicate_function[4 + byte] = static_cast<uint8_t>(duplicated_size >> (byte * 8));
-    rejects([&]{ qsound::decode_firmware(duplicate_function); });
+    rejects([&]{qsound::decode_firmware(duplicate_function);});
     auto wrong_type{file};
     wrong_type[8] = 'W';
-    rejects([&]{ qsound::decode_firmware(wrong_type); });
+    rejects([&]{qsound::decode_firmware(wrong_type);});
     auto broken{file};
     broken.back() ^= 1;
     // Program IDs are not part of the checksum. Corrupt an instruction instead.
     broken[file.size() - 12] ^= 1;
-    rejects([&]{ qsound::decode_firmware(broken); });
+    rejects([&]{qsound::decode_firmware(broken);});
     std::array<uint32_t, qsound::program_capacity + 1> too_large{};
-    rejects([&]{ qsound::decode_program(program(too_large)); });
+    rejects([&]{qsound::decode_program(program(too_large));});
     auto const largest{qsound::decode_program(program(std::span{too_large}.first(qsound::program_capacity)))};
     require(largest.size == qsound::program_capacity, "maximum-sized valid program was rejected");
-    rejects([&]{ qsound::decode_program(std::array<uint8_t, 9>{}); });
+    rejects([&]{qsound::decode_program(std::array<uint8_t, 9>{});});
     require(qsound::classify_instruction(0x8800'0200) == qsound::instruction_format::immediate_branch, "branch classification changed");
     require(qsound::classify_instruction(0x688e'f0ff) == qsound::instruction_format::undocumented, "ST18932 extension was silently treated as ST18930");
     std::cout << "Firmware loading, endian conversion, checksum, rate selection, unknown chunks and truncation checks passed\n";

@@ -9,21 +9,21 @@ namespace qsound {
 inline unsigned int constexpr spatial_position_count{33};
 
 struct filter_coefficients {
-  unsigned int address{};
+  unsigned int address{0};
   std::vector<int16_t> taps;
 };
 
 struct position_gains {
-  int16_t direct_left{};
-  int16_t direct_right{};
-  int16_t filtered_left{};
-  int16_t filtered_right{};
+  int16_t direct_left{0};
+  int16_t direct_right{0};
+  int16_t filtered_left{0};
+  int16_t filtered_right{0};
 };
 
 struct spatial_tables {
   filter_coefficients left_filter;
   filter_coefficients right_filter;
-  unsigned int direct_delay_samples{};
+  unsigned int direct_delay_samples{0};
   std::array<position_gains, spatial_position_count> positions{};
 };
 

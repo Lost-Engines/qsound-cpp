@@ -19,7 +19,7 @@ void require(bool const condition) {
 auto filter_blocks(program const &initialiser)->std::array<filter_coefficients, 2> {
   /// Read consecutive immediate-to-X0 literal pairs without simulating the DSP
   std::array<filter_coefficients, 2> filters{};
-  unsigned int found{};
+  unsigned int found{0};
   unsigned int constexpr first_coefficient_address{25};
   for(unsigned int pc{8}; pc + 2 < initialiser.size; ++pc) {
     auto const word{initialiser.instructions[pc]};
@@ -48,7 +48,7 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
   unsigned int constexpr table_words{spatial_position_count * words_per_position};
   unsigned int constexpr reverse_start{table_words - 1};
   unsigned int pc{8};
-  bool zero_b{};
+  bool zero_b{false};
   while(pc + 1 < initialiser.size && !(initialiser.instructions[pc] == 0xfc600000u
     && initialiser.instructions[pc + 1] == (0xfd600000u | reverse_start))) {
     auto const word{initialiser.instructions[pc++]};
@@ -60,7 +60,7 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
   require(pc + 1 < initialiser.size && zero_b);
   pc += 2;
   std::array<std::optional<int16_t>, table_words> words{};
-  int forward{};
+  int forward{0};
   int backward{static_cast<int>(reverse_start)};
   std::optional<int16_t> accumulator;
   std::optional<int16_t> result;
@@ -77,9 +77,11 @@ auto gain_table(program const &initialiser)->std::array<position_gains, spatial_
     require((word & 0xffffc0ffu) == 0x04000008u || (word & 0xffffc0ffu) == 0x0400000au);
     require((destination == 4 && ((word >> 8) & 3u) == 1) || (destination == 5 && ((word >> 8) & 3u) == 3));
     std::optional<int16_t> value;
-    if(source == 0) value = result;
-    else if(source == 2) value = accumulator;
-    else if(source == 3) value = 0;
+    if(source == 0) {
+      value = result;
+    } else if(source == 2) {
+      value = accumulator;
+    } else if(source == 3) value = 0;
     require(value.has_value());
     auto const address{destination == 4 ? forward++ : backward--};
     require(address >= 0 && address < static_cast<int>(table_words) && !words[static_cast<unsigned int>(address)]);

@@ -9,8 +9,8 @@ using position_phase = uint16_t;
 
 struct sweep_parameters {
   position_phase position{};                                                   // unsigned 8.8 position phase
-  int16_t increment{};                                                         // signed 8.8 phase change per callback
-  bool moving{};
+  int16_t increment{0};                                                        // signed 8.8 phase change per callback
+  bool moving{false};
 };
 
 class position_sweep {

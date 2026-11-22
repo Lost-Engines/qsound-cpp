@@ -4,8 +4,11 @@
 #include "qsound/position_sweep.h"
 
 auto main()->int {
-  unsigned int phase{}, moving{}, cached{}, ticks{};
-  int increment{};
+  unsigned int phase{0};
+  unsigned int moving{0};
+  unsigned int cached{0};
+  unsigned int ticks{0};
+  int increment{0};
   while(std::cin >> phase >> increment >> moving >> cached >> ticks) {
     if(phase > 65535 || increment < -32768 || increment > 32767 || moving > 65535 || cached > 255 || ticks > 100'000) return EXIT_FAILURE;
     qsound::position_sweep sweep{

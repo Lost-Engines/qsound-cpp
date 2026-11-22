@@ -41,7 +41,7 @@ auto main()->int {
     assert(fresh.direct_delay_samples == original.direct_delay_samples);
     assert(changed.left_filter.taps != fresh.left_filter.taps && "editable tables must have independent ownership");
   }
-  bool unsupported_rate{};
+  bool unsupported_rate{false};
   try {
     qsound::make_spatial_tables(48000);
   } catch(std::invalid_argument const &) {
@@ -61,7 +61,10 @@ auto main()->int {
         .filtered_right{},
       }), arithmetic};
       for(int16_t const input : std::array<int16_t, 6>{-32768, -2000, 0, 1, 2000, 32767}) {
-        auto const result{cancellation.process({.left{input}, .right{}})};
+        auto const result{cancellation.process({
+          .left{input},
+          .right{}
+        })};
         assert(result.left == 0 && result.right == 0 && "unity negative FIR cancels the identical direct bus");
       }
       qsound::spatial_model delayed{tables(2, {0}, {
@@ -70,7 +73,10 @@ auto main()->int {
         .filtered_left{},
         .filtered_right{},
       }), arithmetic};
-      assert(delayed.process({.left{16384}, .right{}}).left == 0);
+      assert(delayed.process({
+        .left{16384},
+        .right{}
+      }).left == 0);
       assert(delayed.process({}).left == 0);
       assert(delayed.process({}).left == (rounding == qsound::rounding_model::floor ? 16383 : 16384));
       delayed.reset();
@@ -81,9 +87,12 @@ auto main()->int {
         .filtered_left{32767},
         .filtered_right{},
       }), arithmetic};
-      assert(ordered.process({.left{16384}, .right{}}).left == (rounding == qsound::rounding_model::floor ? -16383 : -16384));
+      assert(ordered.process({
+        .left{16384},
+        .right{}
+      }).left == (rounding == qsound::rounding_model::floor ? -16383 : -16384));
       assert(ordered.process({}).left == 0 && "the last authored tap multiplies the current sample");
-      bool rejected{};
+      bool rejected{false};
       try {
         ordered.set_positions(33, 16);
       } catch(std::out_of_range const &) {
@@ -93,7 +102,7 @@ auto main()->int {
     }
   }
   auto endpoint_tables{tables(0, {0}, {})};
-  for(unsigned int position{}; position != qsound::spatial_position_count; ++position) {
+  for(unsigned int position{0}; position != qsound::spatial_position_count; ++position) {
     endpoint_tables.positions[position] = {
       .direct_left{static_cast<int16_t>(position * 512)},
       .direct_right{static_cast<int16_t>(16384 - position * 256)},
@@ -107,7 +116,7 @@ auto main()->int {
   };
   qsound::spatial_model clamped{endpoint_tables, arithmetic, qsound::position_policy::clamp_to_endpoints};
   qsound::spatial_model explicit_endpoint{std::move(endpoint_tables), arithmetic};
-  for(unsigned int position{}; position != 256; ++position) {
+  for(unsigned int position{0}; position != 256; ++position) {
     clamped.set_positions(position, 255 - position);
     explicit_endpoint.set_positions(std::min(position, 32u), std::min(255 - position, 32u));
     qsound::pcm_inputs const input{

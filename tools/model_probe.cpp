@@ -21,7 +21,7 @@
 namespace {
 
 auto number(std::string_view const text)->unsigned int {
-  unsigned int result{};
+  unsigned int result{0};
   auto const parsed{std::from_chars(text.data(), text.data() + text.size(), result)};
   if(parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size()) throw std::invalid_argument{"invalid unsigned argument"};
   return result;
@@ -51,7 +51,12 @@ auto main(int const argc, char const *const *argv)->int try {
 #endif // defined(_WIN32)
   unsigned int const first{legacy_arguments ? 2u : 1u};
   auto const rate{number(argv[first])};
-  char const *const firmware_path{legacy_arguments ? argv[1] : external_firmware ? argv[7] : nullptr};
+  char const *firmware_path{nullptr};
+  if(legacy_arguments) {
+    firmware_path = argv[1];
+  } else if(external_firmware) {
+    firmware_path = argv[7];
+  }
   std::string_view const rounding{argv[first + 3]};
   std::string_view const accumulation{argv[first + 4]};
   if((rounding != "floor" && rounding != "nearest") || (accumulation != "each" && accumulation != "output")) {

@@ -19,7 +19,7 @@ struct filter_bank {
   unsigned int direct_delay_samples;
 };
 
-inline constexpr std::array<position_gains, spatial_position_count> positions{
+inline std::array<position_gains, spatial_position_count> constexpr positions{
   position_gains{
     .direct_left{32766},
     .direct_right{0},
@@ -220,7 +220,7 @@ inline constexpr std::array<position_gains, spatial_position_count> positions{
   },
 };
 
-inline constexpr filter_bank<11> bank_8000{
+inline filter_bank<11> constexpr bank_8000{
   .left{
     333, 1598, -262, -4195, -22108, -4649, 800, -174,
     1833, -553, -65,
@@ -232,7 +232,7 @@ inline constexpr filter_bank<11> bank_8000{
   .direct_delay_samples{5},
 };
 
-inline constexpr filter_bank<17> bank_11025{
+inline filter_bank<17> constexpr bank_11025{
   .left{
     591, 1177, -324, 2132, -1093, -1780, -9679, -18499,
     682, -1303, 381, 597, 921, 364, -304, -414,
@@ -246,7 +246,7 @@ inline constexpr filter_bank<17> bank_11025{
   .direct_delay_samples{8},
 };
 
-inline constexpr filter_bank<19> bank_22050{
+inline filter_bank<19> constexpr bank_22050{
   .left{
     871, -303, -1333, -1204, -1282, -4210, -8952, -10112,
     -4033, 289, 742, -608, -888, 176, 564, 344,
@@ -260,7 +260,7 @@ inline constexpr filter_bank<19> bank_22050{
   .direct_delay_samples{9},
 };
 
-inline constexpr filter_bank<49> bank_44100{
+inline filter_bank<49> constexpr bank_44100{
   .left{
     30, 103, 194, 294, 378, 414, 355, 177,
     -71, -340, -576, -709, -736, -702, -707, -1037,

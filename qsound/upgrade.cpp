@@ -7,15 +7,15 @@ namespace {
 
 class bit_reader {
   std::span<uint8_t const> input;
-  size_t byte{};
-  unsigned int bit{};
+  size_t byte{0};
+  unsigned int bit{0};
 
 public:
   explicit bit_reader(std::span<uint8_t const> const input) : input{input} {}
 
   auto read(unsigned int const count)->unsigned int {
-    unsigned int result{};
-    for(unsigned int shift{}; shift != count; ++shift) {
+    unsigned int result{0};
+    for(unsigned int shift{0}; shift != count; ++shift) {
       if(byte == input.size()) throw format_error{byte, "truncated DCL firmware stream"};
       result |= ((static_cast<unsigned int>(input[byte]) >> bit) & 1u) << shift;
       if(++bit == 8) {
@@ -35,15 +35,15 @@ struct huffman_table {
 template<size_t Count>
 constexpr auto make_table(std::array<unsigned int, Count> const &packed)->huffman_table {
   std::array<unsigned int, 64> lengths{};
-  unsigned int size{};
+  unsigned int size{0};
   huffman_table result;
   for(auto const item : packed) {
     auto const length{item & 15u};
-    for(unsigned int repeat{}; repeat != (item >> 4) + 1; ++repeat) lengths.at(size++) = length;
+    for(unsigned int repeat{0}; repeat != (item >> 4) + 1; ++repeat) lengths.at(size++) = length;
   }
-  unsigned int output{};
+  unsigned int output{0};
   for(unsigned int width{1}; width != result.counts.size(); ++width) {
-    for(unsigned int symbol{}; symbol != size; ++symbol) {
+    for(unsigned int symbol{0}; symbol != size; ++symbol) {
       if(lengths[symbol] == width) {
         result.symbols[output++] = symbol;
         ++result.counts[width];
@@ -61,7 +61,9 @@ std::array<unsigned int, 16> constexpr length_bases{3, 2, 4, 5, 6, 7, 8, 9, 10, 
 std::array<unsigned int, 16> constexpr length_extras{0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8};
 
 auto symbol(bit_reader &bits, huffman_table const &table)->unsigned int {
-  unsigned int code{}, first{}, index{};
+  unsigned int code{0};
+  unsigned int first{0};
+  unsigned int index{0};
   for(unsigned int width{1}; width != table.counts.size(); ++width) {
     code = (code << 1) | (bits.read(1) ^ 1u);
     auto const count{table.counts[width]};
@@ -95,7 +97,7 @@ std::vector<uint8_t> unpack_upgrade_firmware(std::span<uint8_t const> const byte
     auto const distance{(symbol(bits, distance_codes) << extra) + bits.read(extra) + 1};
     if(distance > output.size()) throw std::invalid_argument{"DCL firmware back-reference precedes output"};
     if(length > maximum_bytes - output.size()) throw std::invalid_argument{"DCL firmware output exceeds extraction limit"};
-    for(unsigned int index{}; index != length; ++index) output.push_back(output[output.size() - distance]);
+    for(unsigned int index{0}; index != length; ++index) output.push_back(output[output.size() - distance]);
   }
 }
 
