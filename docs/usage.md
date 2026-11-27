@@ -238,7 +238,7 @@ Select tables and construct the processor during setup, where failures can be re
 
 ## Build and use the command-line tools
 
-Run these commands from the repository root:
+The standalone tools build uses Boost.Program_options. Run these commands from the repository root.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

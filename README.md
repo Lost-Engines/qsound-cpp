@@ -21,7 +21,7 @@ The **[usage guide](docs/usage.md)** covers firmware loading, C++ examples, inpu
 
 ## Try it on a recording
 
-From the repository root, with CMake 3.30+, a C++26 compiler, Python 3 and the `flac` command-line encoder:
+Build the tools from the repository root with CMake 3.30+, a C++26 compiler and Boost.Program_options. The renderer also uses Python 3 and the `flac` command-line encoder.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

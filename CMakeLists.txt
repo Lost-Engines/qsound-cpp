@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(qsound_cpp LANGUAGES CXX)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+find_package(Boost CONFIG REQUIRED COMPONENTS program_options)
 include(CTest)
 include(qsound/sources.cmake)
 
@@ -19,12 +20,15 @@ endfunction()
 
 add_executable(qsound_inspect tools/inspect.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_inspect)
+target_link_libraries(qsound_inspect PRIVATE Boost::program_options)
 
 add_executable(qsound_model_probe tools/model_probe.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_model_probe)
+target_link_libraries(qsound_model_probe PRIVATE Boost::program_options)
 
 add_executable(qsound_tables tools/tables.cpp ${QSOUND_SOURCES} ${QSOUND_RESEARCH_SOURCES})
 configure_qsound_tool(qsound_tables)
+target_link_libraries(qsound_tables PRIVATE Boost::program_options)
 
 add_executable(qsound_control_probe tools/control_probe.cpp ${QSOUND_SOURCES})
 configure_qsound_tool(qsound_control_probe)

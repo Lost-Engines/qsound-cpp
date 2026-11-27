@@ -3,7 +3,10 @@
 #include <iostream>
 #include <iterator>
 #include <print>
+#include <stdexcept>
+#include <string>
 #include <vector>
+#include <boost/program_options.hpp>
 #include "qsound/firmware.h"
 #include "qsound/spatial_tables.h"
 #include "qsound/upgrade.h"
@@ -23,13 +26,25 @@ void print_filter(qsound::filter_coefficients const &filter) {
 } // anonymous namespace
 
 auto main(int const argc, char const *const *argv)->int try {
-  if(argc != 1 && argc != 2) {
-    std::println(std::cerr, "Usage: qsound_tables [FIRMWARE] (default: built-in coefficients)");
-    return EXIT_FAILURE;
+  boost::program_options::options_description options{"Options"};
+  options.add_options()
+    ("help,h", "Show usage")
+    ("firmware", boost::program_options::value<std::string>()->value_name("FILE"), "Read coefficients from a CSP or PVL file (default: built-in coefficients)");
+  boost::program_options::positional_options_description positional;
+  positional.add("firmware", 1);
+  int constexpr option_style{boost::program_options::command_line_style::default_style & ~boost::program_options::command_line_style::allow_guessing};
+  boost::program_options::variables_map arguments;
+  boost::program_options::store(boost::program_options::command_line_parser(argc, argv)
+    .options(options).positional(positional).style(option_style).run(), arguments);
+  if(arguments.contains("help")) {
+    std::cout << "Usage: qsound_tables [FIRMWARE]\n" << options;
+    return EXIT_SUCCESS;
   }
+  boost::program_options::notify(arguments);
+
   std::vector<qsound::firmware_function> firmware;
-  if(argc == 2) {
-    std::ifstream file{argv[1], std::ios::binary};
+  if(arguments.contains("firmware")) {
+    std::ifstream file{arguments["firmware"].as<std::string>(), std::ios::binary};
     if(!file) throw std::runtime_error{"cannot open firmware file"};
     std::vector<uint8_t> const bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     firmware = qsound::decode_firmware_asset(bytes);

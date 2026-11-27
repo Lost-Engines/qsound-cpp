@@ -4,7 +4,7 @@ Improvements to integration, documentation, tests and the recovered signal path 
 
 ## Build and check
 
-Use CMake 3.30+ and a C++26 compiler:
+Use CMake 3.30+, a C++26 compiler and Boost.Program_options for the command-line tools.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
